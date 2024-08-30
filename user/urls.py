@@ -1,8 +1,8 @@
-# from django.urls import path
-# from . import views
+from django.urls import path
+from . import views
 
-# urlpatterns = [
-#     path('', views.login),
-#     path('orderIt', views.createPerm),
-# ]
+urlpatterns = [
+    path('', views.registration_view),
+    # path('orderIt', views.createPerm),
+]
 
