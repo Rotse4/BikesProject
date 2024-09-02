@@ -3,7 +3,7 @@ import jwt
 from django.urls import reverse
 from django.contrib import admin
 from django.urls import resolve
-from account.models import Account
+from . models import ShopUser
 
 SECRET_KEY = 'my_secret_key'
 

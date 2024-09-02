@@ -72,7 +72,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'tenant.wsgi.application'
 
-AUTH_USER_MODEL = 'user.ShopUser'
+AUTH_USER_MODEL = 'user.Account'
 
 
 # Database

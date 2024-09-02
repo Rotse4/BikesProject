@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from. models import Permission, User, ShopUser
+from. models import Permission, User, Account
 
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
-class ShopUserSerealizer(serializers.ModelSerializer):
+class AccountSerealizer(serializers.ModelSerializer):
     class Meta:
-        model = ShopUser
+        model = Account
         fields = '__all__'

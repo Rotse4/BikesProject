@@ -1,5 +1,8 @@
 from rest_framework.decorators import api_view
-from . serializers import ShopUserSerealizer
+
+from user.models import Account
+from user.permissions import has_permission
+from . serializers import AccountSerealizer
 # from .auth_middware import TokenAuthenticationMiddleware
 import datetime
 from rest_framework.response import Response
@@ -27,7 +30,7 @@ class TokenBuilder:
 
 @api_view(['POST'])
 def registration_view(request):
-    serializer  = ShopUserSerealizer(data=request.data)
+    serializer  = AccountSerealizer(data=request.data)
     data={}
     if serializer.is_valid():
         account = serializer.save()
@@ -47,3 +50,11 @@ def registration_view(request):
         data = serializer.errors
         
     return Response(data, status=400)
+
+
+@api_view(['GET'])
+@has_permission('retrive_job')
+def viewUsers(request):
+    users = ShopUser.objects.all()
+    serializer = ShopUserSerealizer(users, many =True)
+    return Response({"users":serializer.data})

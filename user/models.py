@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
+# from shop.models import Shop
+
 # Create your models here.
 
 class MyAccountManager(BaseUserManager):
@@ -40,7 +42,7 @@ class MyAccountManager(BaseUserManager):
 
 
 
-class ShopUser(AbstractBaseUser):
+class Account(AbstractBaseUser):
     username = models.CharField(max_length=50, unique=True)
     phone_number = models.CharField(
         max_length=15,
@@ -69,7 +71,7 @@ class ShopUser(AbstractBaseUser):
         return True
     
     class Meta:
-        db_table = 'ShopUser'
+        db_table = 'Account'
     
 
 class Permission(models.Model):
@@ -103,4 +105,8 @@ class Role(models.Model):
 
 #     def __str__(self):
 #         return self.name[0:50]
+
+
+
+
 
