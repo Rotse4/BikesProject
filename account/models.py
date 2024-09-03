@@ -9,7 +9,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 # Create your models here.
 
 class MyAccountManager(BaseUserManager):
-    def create_user(self, username, phone_number=None, password=None):
+    def create_user(self, username, phone_number, password=None):
         if not username:
             raise ValueError("Users must have a username")
         if not phone_number:
@@ -44,12 +44,7 @@ class MyAccountManager(BaseUserManager):
 
 class Account(AbstractBaseUser):
     username = models.CharField(max_length=50, unique=True)
-    phone_number = models.CharField(
-        max_length=15,
-        unique=True,
-        null=True,
-        blank=True,
-    )
+    phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True,)
     date_joined = models.DateField(verbose_name='date joined', auto_now_add=True)
     last_login = models.DateField(verbose_name='last login', auto_now=True)
     is_active = models.BooleanField(default=True)

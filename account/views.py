@@ -60,14 +60,15 @@ def login(request):
 
     # print(request.data.get('password'))
 
-    user = authenticate(request, username=username, password=password)
-    if user is not None:
+    account = authenticate(request, username=username, password=password)
+    print(f"acoount {account}")
+    if account is not None:
         # Authentication successful, generate tokens
         print("here")
         data = {}
-        data['phone_number'] = user.phone_number
-        data['username'] = user.username
-        data['id'] = user.pk
+        data['phone_number'] = account.phone_number
+        data['username'] = account.username
+        data['id'] = account.pk
 
         access_token = TokenBuilder.accessToken(payload=data)
         refresh_token = TokenBuilder.refreshToken(payload=data)
@@ -87,7 +88,7 @@ def login(request):
 
 
 @api_view(['GET'])
-@has_perms('can_view')
+@has_perms('can_add')
 def viewUsers(request):
     if request.account.is_authenticated:
         print(f"Authenticated user: {request.account.username}")
@@ -96,5 +97,5 @@ def viewUsers(request):
 
     users = Account.objects.all()
     serializer = AccountSerealizer(users, many=True)
-    return Response({"users": serializer.data})
+    return Response({"users": serializer.errors})
 
