@@ -1,13 +1,15 @@
 from django.contrib import admin
-
+from django.contrib.auth.admin import UserAdmin 
 # Register your models here.
 
 from . models import Role,Permission,Account
 
-class AccountAdmin(admin.ModelAdmin):
+class AccountAdmin(UserAdmin):
     model = Account
     list_display = ("id","username","phone_number","date_joined")
-
+    fieldsets = ()
+    list_filter = (['id'])
+    filter_horizontal =()
 
 class PermissionAdmin(admin.ModelAdmin):
     model = Permission

@@ -3,7 +3,7 @@ import jwt
 from django.urls import reverse
 from django.contrib import admin
 from django.urls import resolve
-from . models import ShopUser
+from . models import Account
 
 SECRET_KEY = 'my_secret_key'
 
@@ -14,7 +14,7 @@ class TokenAuthenticationMiddleware:
     def __call__(self, request):
         # Exclude specific routes from token authentication if needed
         print(request.path)
-        excluded_routes = ['/api/account/register', '/api/account/log', '/api','/favicon.ico','/cart/callback', '/api/account/refresh']
+        excluded_routes = ['/user/register', '/user/login', '/user/','/favicon.ico','/cart/callback', '/account/refresh']
 
         if request.path in excluded_routes or request.path.startswith('/admin/') or request.path.startswith('/static/') or request.path.startswith('/media/images/') or request.path.startswith('/api'):
             return self.get_response(request)

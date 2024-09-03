@@ -35,20 +35,48 @@
 
 from functools import wraps
 from django.http import HttpResponseForbidden
+
+from shop.models import ShopUSer
 from .models import *
+from rest_framework.response import Response
 
-def get_user_role(user):
-    user_role= ShopUser.objects.get(user__id = user.id)
-    return user_role.role
+def get_user_role(account):
+    
+    shop_user= ShopUSer.objects.get(user__id = account.id)
+    role = shop_user.role
+    shop = shop_user.shop
 
-def has_permission(perm_name):
+    acess={"role":role , "shop":shop}
+    print(f"ffff {shop}")
+
+
+    return acess
+
+# def has_permission(perm_name):
+#     def decorator(view_func):
+#         @wraps(view_func)
+#         def _wrapped_view(request, *args, **kwargs):
+#             if request.user.is_authenticated:
+#                 user_role = get_user_role(request.user)
+#                 if user_role and user_role.permissions.filter(name=perm_name).exists():
+#                     return view_func(request, *args, **kwargs)
+#             return HttpResponseForbidden("You don't have permission to access this page.")
+#         return _wrapped_view
+#     return decorator
+
+
+def has_perms(perm_name):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            if request.user.is_authenticated:
-                user_role = get_user_role(request.user)
-                if user_role and user_role.permissions.filter(name=perm_name).exists():
+            print(str(request.account) + "yyy")
+            if request.account.is_authenticated:
+                print("here")
+                user_role = get_user_role(request.account)
+                if user_role["role"].permissions.filter(name = perm_name).exists():
                     return view_func(request, *args, **kwargs)
-            return HttpResponseForbidden("You don't have permission to access this page.")
+            return Response("You don't have permission to access this page.")
         return _wrapped_view
     return decorator
+
+    

@@ -1,12 +1,13 @@
 from rest_framework.decorators import api_view
 
-from user.models import Account
-from user.permissions import has_permission
+from account.models import Account
+from account.permissions import has_perms
 from . serializers import AccountSerealizer
 # from .auth_middware import TokenAuthenticationMiddleware
 import datetime
 from rest_framework.response import Response
 import jwt
+from django.contrib.auth import authenticate
 
 class TokenBuilder:
     def __init__(self) -> None:
@@ -52,9 +53,48 @@ def registration_view(request):
     return Response(data, status=400)
 
 
+@api_view(['POST'])
+def login(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    # print(request.data.get('password'))
+
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        # Authentication successful, generate tokens
+        print("here")
+        data = {}
+        data['phone_number'] = user.phone_number
+        data['username'] = user.username
+        data['id'] = user.pk
+
+        access_token = TokenBuilder.accessToken(payload=data)
+        refresh_token = TokenBuilder.refreshToken(payload=data)
+
+        return Response({
+            'payload': {
+                'user': data,
+                'token': {
+                    'access_token': access_token,
+                    'refresh_token': refresh_token
+                }
+            }
+        })
+    else:
+        # Authentication failed
+        return Response({'error': 'Invalid credentials'}, status=400)
+
+
 @api_view(['GET'])
-@has_permission('retrive_job')
+@has_perms('can_view')
 def viewUsers(request):
-    users = ShopUser.objects.all()
-    serializer = ShopUserSerealizer(users, many =True)
-    return Response({"users":serializer.data})
+    if request.account.is_authenticated:
+        print(f"Authenticated user: {request.account.username}")
+    else:
+        print("User is not authenticated")
+
+    users = Account.objects.all()
+    serializer = AccountSerealizer(users, many=True)
+    return Response({"users": serializer.data})
+

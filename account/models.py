@@ -27,7 +27,7 @@ class MyAccountManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, phone_number=None, password = None):
+    def create_superuser(self, username, phone_number, password ):
         user = self.create_user(
             username=username,
             phone_number = phone_number,
@@ -62,10 +62,10 @@ class Account(AbstractBaseUser):
     objects = MyAccountManager()
 
     def __str__(self):
-        return f"({self.username})"
+        return f"{self.username}"
 
     def has_perm(self, perm, obj=None):
-        return self.is_superuser
+        return self.is_staff
 
     def has_module_perms(self, app_label):
         return True

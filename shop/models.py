@@ -1,7 +1,9 @@
 from django.db import models
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-from user.models import Permission, Role, Account
+
+from account.models import Account, Role
+
 
 
 

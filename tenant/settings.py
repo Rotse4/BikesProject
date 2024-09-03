@@ -38,12 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'shop',
-    'user',
+    'account',
     'rest_framework'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # "corsheaders.middleware.CorsMiddleware",
+    'account.auth_middware.TokenAuthenticationMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,10 +71,11 @@ TEMPLATES = [
         },
     },
 ]
+AUTH_USER_MODEL = 'account.Account'
 
 WSGI_APPLICATION = 'tenant.wsgi.application'
 
-AUTH_USER_MODEL = 'user.Account'
+
 
 
 # Database
