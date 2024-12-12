@@ -1,41 +1,80 @@
-
 from functools import wraps
-from django.http import HttpResponseForbidden
-
-from shop.models import ShopUSer
-from .models import *
 from rest_framework.response import Response
+from shop.models import ShopUSer
+from .models import Permission
+from .serializers import PermissionSerializer
 
-def get_user_role(account):
+
+def get_user_role(account, shop_user):
     try:
-        shop_user = ShopUSer.objects.get(user__id=account.id)
+        shop_user = ShopUSer.objects.get(id=account.id)
+        print(f"shop_user {shop_user}")
         role = shop_user.role
         shop = shop_user.shop
+        print(f"shop_user {role} {shop}")
 
-        access = {"role": role, "shop": shop}
-        print(f"Shop: {shop}")
-        return access
+        return {"role": role, "shop": shop}
     except ShopUSer.DoesNotExist:
-        # Return an empty dictionary or handle it in a consistent way
+        print(f"shop_user does not exist")
         return {"role": None, "shop": None}
 
 
+def has_perms(perm_names, shop_required=False):
+    """
+    A decorator to check if the user has all required permissions.
 
+    Args:
+        perm_names (list): A list of permission names that the user must have.
+        shop_required (bool): Whether access to the shop is required.
+    """
+    if isinstance(perm_names, str):
+        perm_names = [perm_names]  # Ensure it's a list for uniform handling
 
-def has_perms(perm_name):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            print(str(request.account) + "yyy")
+            role = None  # Initialize role to avoid UnboundLocalError
+            shop = None  # Initialize shop to avoid UnboundLocalError
             if request.account.is_authenticated:
-                print("here")
-                user_role = get_user_role(request.account)
-                
-                # Check if role is valid and has permissions
-                role = user_role.get("role")
-                if role and role.permissions.filter(name=perm_name).exists():
-                    return view_func(request, *args, **kwargs)
-                
-            return Response("You don't have permission to access this page.")
+                shop_user = getattr(request, "shop_user", None)
+                if shop_user is not None:
+                    user_role = get_user_role(request.account, request.shop_user)
+
+                    role = user_role.get("role")
+                    shop = user_role.get("shop")
+
+                if role:
+                    # Check if the user has all the required permissions
+                    missing_perms = [
+                        perm
+                        for perm in perm_names
+                        if not role.permissions.filter(name=perm).exists()
+                    ]
+                    if not missing_perms:
+                        # If shop access is required, validate the shop
+                        if shop_required:
+                            shop_id = request.shop_id
+                            print(f"shop_id {shop_id}")
+                            if str(shop.id) == str(shop_id):
+                                return view_func(request, *args, **kwargs)
+                            else:
+                                return Response(
+                                    "You don't have permission to access this shop.",
+                                    status=403,
+                                )
+                        else:
+                            return view_func(request, *args, **kwargs)
+
+                # If any required permission is missing
+                return Response(
+                    "You don't have access permission.",
+                    status=403,
+                )
+
+            return Response(
+                "You don't have permission to access this page.", status=403
+            )
+
         return _wrapped_view
+
     return decorator

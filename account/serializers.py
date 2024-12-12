@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+
+from shop.models import Shop
 from. models import Permission, User, Account
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -38,3 +40,8 @@ class AccountSerealizer(serializers.ModelSerializer):
         account.set_password(password)
         account.save()
         return account  
+    
+class SelectShopSerializer (serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = '__all__'
