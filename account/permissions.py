@@ -6,8 +6,9 @@ from .serializers import PermissionSerializer
 
 
 def get_user_role(account, shop_user):
+    print(f"shop_user {shop_user}")
     try:
-        shop_user = ShopUSer.objects.get(id=account.id)
+        shop_user = ShopUSer.objects.get(shop=shop_user)
         print(f"shop_user {shop_user}")
         role = shop_user.role
         shop = shop_user.shop
@@ -15,7 +16,7 @@ def get_user_role(account, shop_user):
 
         return {"role": role, "shop": shop}
     except ShopUSer.DoesNotExist:
-        print(f"shop_user does not exist")
+        print(f"shop user does not exist")
         return {"role": None, "shop": None}
 
 
@@ -37,6 +38,7 @@ def has_perms(perm_names, shop_required=False):
             shop = None  # Initialize shop to avoid UnboundLocalError
             if request.account.is_authenticated:
                 shop_user = getattr(request, "shop_user", None)
+                print(f"shop_useer {shop_user}")
                 if shop_user is not None:
                     user_role = get_user_role(request.account, request.shop_user)
 
