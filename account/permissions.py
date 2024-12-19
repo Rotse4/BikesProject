@@ -8,15 +8,17 @@ from .serializers import PermissionSerializer
 def get_user_role(account, shop_user):
     print(f"shop_user {shop_user}")
     try:
-        shop_user = ShopUSer.objects.get(shop=shop_user)
-        print(f"shop_user {shop_user}")
+        # Ensure you're correctly querying the `ShopUSer` model
+        shop_user =  ShopUSer.objects.get(id=shop_user)
+
+        print(f"shop_user {shop_user.shop}")
         role = shop_user.role
         shop = shop_user.shop
         print(f"shop_user {role} {shop}")
 
         return {"role": role, "shop": shop}
     except ShopUSer.DoesNotExist:
-        print(f"shop user does not exist")
+        print("shop user does not exist")
         return {"role": None, "shop": None}
 
 

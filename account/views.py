@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view, APIView
 
-from account.models import Account, Role
+from account.models import Account
 
 # from account.permissions import has_perms
 from shop.models import ShopUSer
@@ -126,7 +126,7 @@ def registration_view(request):
             "properties": {
                 "username": {"type": "string", "example": "john_doe"},
                 "password": {"type": "string", "example": "password123"},
-                "shop_id": {"type": "integer", "example": 1, "nullable": True},
+                "shop_name": {"type": "string", "example": "Shop A", "nullable": True},
             },
             "required": ["username", "password"],
         }
@@ -147,9 +147,9 @@ def registration_view(request):
                                 },
                                 "username": {"type": "string", "example": "john_doe"},
                                 "id": {"type": "integer", "example": 1},
-                                "shop_id": {
-                                    "type": "integer",
-                                    "example": 1,
+                                "shop_name": {
+                                    "type": "string",
+                                    "example": "Shop A",
                                     "nullable": True,
                                 },
                             },
@@ -179,7 +179,7 @@ def registration_view(request):
         },
     },
     summary="User Login",
-    description="Authenticate a user using username, password, and optionally a shop ID.",
+    description="Authenticate a user using username, password, and optionally a shop name.",
     tags=["Authentication"],
 )
 @api_view(["POST"])
@@ -188,20 +188,20 @@ def login(request):
     print(username)
     password = request.data.get("password")
     print(f"pass {password}")
-    selected_shop_id = request.data.get(
-        "shop_id"
-    )  # Expecting the selected shop ID if multiple shops exist
-    print(f"selected {selected_shop_id}")
+    selected_shop_name = request.data.get(
+        "shop_name"
+    )  # Expecting the selected shop name if multiple shops exist
+    print(f"selected shop name: {selected_shop_name}")
 
     account = authenticate(request, username=username, password=password)
 
     if account is not None:
         shop_users = ShopUSer.objects.filter(user=account)
 
-        if shop_users.count() > 1 and selected_shop_id == None:
+        if shop_users.count() > 1 and selected_shop_name is None:
             # If multiple shops exist, return them to the user for selection
             shops = [
-                {"id": shop.shop.id, "name": shop.shop.name} for shop in shop_users
+                {"name": shop.shop.name, "id": shop.shop.id} for shop in shop_users
             ]
             return Response(
                 {
@@ -220,10 +220,10 @@ def login(request):
         elif shop_users.count() == 0:
             return _generate_token_response(account, None)
 
-        # Handle case where user has multiple shops and selects one
-        if selected_shop_id:
+        # Handle case where user has multiple shops and selects one by name
+        if selected_shop_name:
             try:
-                selected_shop_user = shop_users.get(shop__id=selected_shop_id)
+                selected_shop_user = shop_users.get(shop__name=selected_shop_name)
                 return _generate_token_response(account, selected_shop_user.shop)
             except ShopUSer.DoesNotExist:
                 return Response({"error": "Invalid shop selection"}, status=400)

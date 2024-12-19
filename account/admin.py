@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin 
 # Register your models here.
 
-from . models import Role,Permission,Account
+from . models import Permission,Account
 
 class AccountAdmin(UserAdmin):
     model = Account
@@ -15,16 +15,13 @@ class PermissionAdmin(admin.ModelAdmin):
     model = Permission
     list_display = ("id","name")
 
-class RoleAdmin(admin.ModelAdmin):
-    model = Role
-    list_display = ("id","name")
 
 
 admin.site.register(Account, AccountAdmin)
 
 admin.site.register(Permission, PermissionAdmin)
 
-admin.site.register(Role, RoleAdmin)
+# admin.site.register(Role, RoleAdmin)
 
 
 # class ShopUser(AbstractBaseUser):

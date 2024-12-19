@@ -6,6 +6,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 # from shop.models import Shop
 
+# from shop.models import Shop
+
 # Create your models here.
 
 
@@ -87,12 +89,3 @@ class Permission(models.Model):
 permisions = ["can_edit", "can_delete", "can_view"]
 
 
-class Role(models.Model):
-    name = models.CharField(max_length=50)
-    permissions = models.ManyToManyField(Permission)
-
-    def __str__(self):
-        return self.name[0:50]
-
-    class Meta:
-        db_table = "Role"

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 
-from . models import Shop,ShopRole,ShopUSer
+from . models import  Roles, Shop,ShopUSer
 
 class ShopAdmin(admin.ModelAdmin):
     model = Shop
@@ -11,12 +11,19 @@ class ShopAdmin(admin.ModelAdmin):
 
 admin.site.register(Shop, ShopAdmin)
 
-class ShopRoleAdmin(admin.ModelAdmin):
-    model = ShopRole
-    list_display = ("id","shop_role", "shop", "name")
+class RoleAdmin(admin.ModelAdmin):
+    model = Roles
+    list_display = ("id","name")
+    
+admin.site.register(Roles, RoleAdmin)
 
 
-admin.site.register(ShopRole, ShopRoleAdmin)
+# class ShopRoleAdmin(admin.ModelAdmin):
+#     model = ShopRole
+#     list_display = ("id","shop_role", "shop", "name")
+
+
+# admin.site.register(ShopRole, ShopRoleAdmin)
 
 # class UserShopRoleAdmin(admin.ModelAdmin):
 #     model = UserShopRole
