@@ -9,26 +9,26 @@ from rest_framework import status
 from django.db.models import Q
 
 
-@api_view(['POST'])
-# Create your views here.
+# @api_view(['POST'])
+# # Create your views here.
     
-@extend_schema(
-    parameters=[{
-        'name': 'shop_id',
-        'in': 'path',
-        'required': True,
-        'description': 'Shop ID to fetch items for',
-        'schema': {'type': 'string'},
-    }],
-    responses={200: ItemSerializer(many=True)},
-    tags=["Items"]
-)
-@api_view(['GET'])
-@has_perms
-def getItems(request, shop_id=""):
-    foods = Item.objects.filter(shop__id=request.shop_id)
-    serializer = ItemSerializer(foods, many=True)
-    return Response({"foods": serializer.data})
+# @extend_schema(
+#     parameters=[{
+#         'name': 'shop_id',
+#         'in': 'path',
+#         'required': True,
+#         'description': 'Shop ID to fetch items for',
+#         'schema': {'type': 'string'},
+#     }],
+#     responses={200: ItemSerializer(many=True)},
+#     tags=["Items"]
+# )
+# @api_view(['GET'])
+# # @has_perms
+# def getItems(request, shop_id=""):
+#     foods = Item.objects.filter(shop__id=request.shop_id)
+#     serializer = ItemSerializer(foods, many=True)
+#     return Response({"foods": serializer.data})
 
 @extend_schema(
     responses={200: ItemSerializer(many=True)},
@@ -71,9 +71,12 @@ def getItem(request, pk):
     tags=["Items"]
 )
 @api_view(['POST'])
-@has_perms(['can_add'])
+@has_perms(['can_add'],shop_required=True)
 def createItem(request):
-    serializer = ItemSerializer(data=request.data)
+    data = request.data.copy() 
+    data['shop'] = request.shop_id
+    print(f"shop id now {data['shop']}")
+    serializer = ItemSerializer(data=data)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=201)
