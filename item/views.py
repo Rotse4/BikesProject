@@ -7,6 +7,7 @@ from .serializers import ItemSerializer
 from .models import Item
 from rest_framework import status
 from django.db.models import Q
+from django.utils.decorators import method_decorator
 
 
 # @api_view(['POST'])
@@ -51,7 +52,6 @@ def normalGetItems(request):
         }
     ],
     responses={200: ItemSerializer()},
-
 )
 @api_view(["GET"])
 @has_perms(["can_view"])
@@ -64,9 +64,7 @@ def getItem(request, pk):
         return Response({"error": "Item not found"}, status=404)
 
 
-@extend_schema(
-    request=ItemSerializer, responses={201: ItemSerializer()}
-)
+@extend_schema(request=ItemSerializer, responses={201: ItemSerializer()})
 @api_view(["POST"])
 @has_perms(["can_add"], shop_required=True)
 def createItem(request):
@@ -80,9 +78,7 @@ def createItem(request):
     return Response(serializer.errors, status=400)
 
 
-@extend_schema(
-    request=ItemSerializer, responses={200: ItemSerializer()}
-)
+@extend_schema(request=ItemSerializer, responses={200: ItemSerializer()})
 @api_view(["PUT"])
 @has_perms(["can_edit"])
 def updateItem(request, pk):
@@ -131,12 +127,16 @@ def item_search_view(request):
 
 from rest_framework.permissions import IsAuthenticated
 
+
 class SecificShopItems(APIView):
-    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access this view
+
+    permission_classes = [
+        IsAuthenticated
+    ]  # Ensure only authenticated users can access this view
 
     def get(self, request, format=None):
         # Extract `shop_id` from the request object
-        shop_id = getattr(request, 'shop_id', None)
+        shop_id = getattr(request, "shop_id", None)
         if not shop_id:
             return Response({"detail": "Shop ID is missing or invalid."}, status=400)
 
