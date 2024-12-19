@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, APIView
 from account.models import Account
 
 # from account.permissions import has_perms
-from shop.models import ShopUSer
+from shop.models import Roles, ShopUSer
 from .serializers import AccountSerealizer, SelectShopSerializer
 
 # from .auth_middware import TokenAuthenticationMiddleware
@@ -332,7 +332,7 @@ def viewUsers(request):
 class ShopList(APIView):
     def get(self, request, format=None):
 
-        roles = Role.objects.all()
+        roles = Roles.objects.all()
         roles_data = [{"id": role.id, "name": role.name} for role in roles]
         
         print("request.account")
