@@ -9,11 +9,14 @@ from django.utils.text import Truncator
 class ItemAdmin(admin.ModelAdmin):
     model = Item
     search_fields=['title']
-    list_display = ('id', 'shop','title', 'category', 'stars', 'price', 'get_image', 'short_description', 'created', 'updated')
+    list_display = ('id', 'shop','title', 'category', 'stars', 'price', 'get_images', 'short_description', 'created', 'updated')
 
-    def get_image(self, obj):
-        return format_html('<img src="{}" width="50" height="50" />', obj.image.url)
-    get_image.short_description = 'Image'
+    def get_images(self, obj):
+        return format_html(
+            '<img src="{}" width="50" height="50" /> <img src="{}" width="50" height="50" /> <img src="{}" width="50" height="50" />',
+            obj.image1.url, obj.image2.url, obj.image3.url
+        )
+    get_images.short_description = 'Images'
 
     def short_description(self, obj):
         max_length = 50  # Maximum length of the truncated description

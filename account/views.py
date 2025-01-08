@@ -183,7 +183,7 @@ def registration_view(request):
     tags=["Authentication"],
 )
 @api_view(["POST"])
-def login(request):
+def adminLogin(request):
     username = request.data.get("username")
     print(username)
     password = request.data.get("password")
@@ -231,6 +231,180 @@ def login(request):
     # Authentication failed
     return Response({"error": "Invalid credentials"}, status=400)
 
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "username": {"type": "string", "example": "john_doe"},
+                "password": {"type": "string", "example": "password123"},
+            },
+            "required": ["username", "password"],
+        }
+    },
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "user": {
+                            "type": "object",
+                            "properties": {
+                                "phone_number": {
+                                    "type": "string",
+                                    "example": "+123456789",
+                                },
+                                "username": {"type": "string", "example": "john_doe"},
+                                "id": {"type": "integer", "example": 1},
+                                "shop_name": {
+                                    "type": "string",
+                                    "example": "Shop A",
+                                    "nullable": True,
+                                },
+                            },
+                        },
+                        "token": {
+                            "type": "object",
+                            "properties": {
+                                "access_token": {
+                                    "type": "string",
+                                    "example": "eyJhb...",
+                                },
+                                "refresh_token": {
+                                    "type": "string",
+                                    "example": "eyJhb...",
+                                },
+                            },
+                        },
+                    },
+                }
+            },
+        },
+        400: {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string", "example": "Invalid credentials"}
+            },
+        },
+    },
+    summary="User Login",
+    description="Authenticate a user using username and password. Shop name is not required for normal users.",
+    tags=["Authentication"],
+)
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "username": {"type": "string", "example": "john_doe"},
+                "password": {"type": "string", "example": "password123"},
+            },
+            "required": ["username", "password"],
+        }
+    },
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "user": {
+                            "type": "object",
+                            "properties": {
+                                "phone_number": {
+                                    "type": "string",
+                                    "example": "+123456789",
+                                },
+                                "username": {"type": "string", "example": "john_doe"},
+                                "id": {"type": "integer", "example": 1},
+                                "shop_name": {
+                                    "type": "string",
+                                    "example": "Shop A",
+                                    "nullable": True,
+                                },
+                            },
+                        },
+                        "token": {
+                            "type": "object",
+                            "properties": {
+                                "access_token": {
+                                    "type": "string",
+                                    "example": "eyJhb...",
+                                },
+                                "refresh_token": {
+                                    "type": "string",
+                                    "example": "eyJhb...",
+                                },
+                            },
+                        },
+                    },
+                }
+            },
+        },
+        400: {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string", "example": "Invalid credentials"}
+            },
+        },
+    },
+    summary="User Login",
+    description="Authenticate a user using username and password. Users with shops will be automatically directed to the first shop.",
+    tags=["Authentication"],
+)
+@api_view(["POST"])
+def userLogin(request):
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    # Authenticate the user
+    account = authenticate(request, username=username, password=password)
+
+    if account is not None:
+        # Fetch associated shops for the user
+        shop_users = ShopUSer.objects.filter(user=account)
+
+        if shop_users.exists():
+            # Automatically direct the user to the first shop
+            first_shop_user = shop_users.first()
+            return _generate_token_response(account, first_shop_user.shop)
+        else:
+            # No associated shops, proceed as a normal user
+            return _generate_token_response(account, None)
+
+    # Authentication failed
+    return Response({"error": "Invalid credentials"}, status=400)
+
+
+def _generate_token_response(user, shop):
+    """
+    Helper function to generate a token response for the user.
+    """
+    # Assuming you have logic to generate access and refresh tokens
+    access_token = "generated_access_token"  # Replace with actual token generation
+    refresh_token = "generated_refresh_token"  # Replace with actual token generation
+
+    return Response(
+        {
+            "payload": {
+                "user": {
+                    "phone_number": getattr(user, "phone_number", None),
+                    "username": user.username,
+                    "id": user.id,
+                    "shop_name": shop.name if shop else None,
+                },
+                "token": {
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                },
+            }
+        },
+        status=200,
+    )
 
 def _generate_token_response(account, shop):
     if shop == None:

@@ -34,7 +34,7 @@ from django.utils.decorators import method_decorator
 
 @extend_schema(responses={200: ItemSerializer(many=True)})
 @api_view(["GET"])
-@has_perms(["can_view"])
+# @has_perms(["can_view"])
 def normalGetItems(request):
     foods = Item.objects.all()
     serializer = ItemSerializer(foods, many=True)

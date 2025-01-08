@@ -15,7 +15,7 @@ class TokenAuthenticationMiddleware:
 
     def __call__(self, request):
         excluded_routes = [
-            '/user/register', '/user/login', '/user/', '/favicon.ico',
+            '/user/register', '/user/userLogin','/user/adminLogin', '/user/', '/favicon.ico',
             '/cart/callback', '/account/refresh', '/schema',
         ]
 
