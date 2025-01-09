@@ -2,7 +2,7 @@
 import requests
 import datetime
 import base64
-from decouple import config
+# from decouple import config
 
 
 
@@ -10,7 +10,8 @@ class MpesaClient():
    
     def __init__(self):
         self.headers =None
-        self.passkey = config("passkey")
+        # self.passkey = config("passkey")
+        self.passkey = "config(passkey)"
         self.business_short_code = "174379"
         self.timestamp = None
         self.access_token = None  # Instance variable to store timestamp

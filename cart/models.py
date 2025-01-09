@@ -2,6 +2,8 @@ from django.db import models
 
 from account.models import Account
 from item.models import Item
+from django.utils.timezone import now
+
 
 # Create your models here.
 
@@ -15,8 +17,8 @@ class Order(models.Model):
     total =models.DecimalField(decimal_places=5,max_digits=10, default=0)
     payment_number = models.CharField(max_length=12)
     confirmed = models.BooleanField(default=False)
-    start_time = models.DateTimeField(auto_now_add=True)
-    end_time = models.DateTimeField(null=True, blank=True)
+    start_time = models.DateTimeField(null=True, blank=True, default=now)
+    end_time = models.DateTimeField(null=True, blank=True, default=now)
 
     def __str__(self):
         return str(self.id)
