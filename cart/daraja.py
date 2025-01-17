@@ -11,7 +11,7 @@ class MpesaClient():
     def __init__(self):
         self.headers =None
         # self.passkey = config("passkey")
-        self.passkey = "config(passkey)"
+        self.passkey = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
         self.business_short_code = "174379"
         self.timestamp = None
         self.access_token = None  # Instance variable to store timestamp
@@ -25,7 +25,7 @@ class MpesaClient():
 
 
     def accessToken(self):
-        authorization ="MlZ4M3JQcjdoYk52dnh5ckFSR1JaUmlWd3R0U3lERVo6MnVyN3hYeWNDZDhra3BWZQ=="
+        authorization ="SkFOODFpcHZlUGRZTmJpc2NueGFSd3lUYU44VXhJb3F3bnhuNUNCcm1BTFpYUFBmOklyVjl5T3ZFRnpkQUhjbUNPVmhUR3JCS2RETlF2VE9QOEc1RGU0YjNpZ1BSR3ZwMUZGVFNJZ09FMVRBZHdWZFI="
         heders ={
         'Authorization': f'Basic {authorization}'
         }

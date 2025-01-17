@@ -54,14 +54,23 @@ def normalGetItems(request):
     responses={200: ItemSerializer()},
 )
 @api_view(["GET"])
-@has_perms(["can_view"])
-def getItem(request, pk):
+@has_perms(["can_add"])
+def getItem(request):
     try:
-        food = Item.objects.get(id=pk)
-        serializer = ItemSerializer(food)
+        # Retrieve the 'id' query parameter
+        item_id = request.GET.get("id")
+
+        if not item_id:
+            return Response({"error": "Missing 'id' query parameter"}, status=400)
+
+        # Fetch the item from the database
+        item = Item.objects.get(id=item_id)
+        serializer = ItemSerializer(item)
         return Response(serializer.data)
     except Item.DoesNotExist:
         return Response({"error": "Item not found"}, status=404)
+    except ValueError:
+        return Response({"error": "Invalid 'id' value"}, status=400)
 
 
 @extend_schema(request=ItemSerializer, responses={201: ItemSerializer()})

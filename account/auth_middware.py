@@ -16,7 +16,7 @@ class TokenAuthenticationMiddleware:
     def __call__(self, request):
         excluded_routes = [
             '/user/register', '/user/userLogin','/user/adminLogin', '/user/', '/favicon.ico',
-            '/cart/callback', '/account/refresh', '/schema',
+            '/cart/callback/', '/account/refresh', '/schema',
         ]
 
         if (request.path in excluded_routes or

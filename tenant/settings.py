@@ -166,3 +166,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://5750-105-29-165-233.ngrok-free.app',
+]

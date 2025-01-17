@@ -2,114 +2,220 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
-from cart.serializers import OrderItemSerializer, OrderSerializer
+from cart.serializers import OrderItemSerializer
 from cart.daraja import MpesaClient
-from cart.models import Order, OrderItem, Payment
+from cart.models import OrderItem, Payment
 from item.models import Item
+from decimal import Decimal
 
 
 # Create your views here.
 
 
 @extend_schema(
-    operation_id="submit_order",
-    summary="Submit a new order",
-    description="Submit an order with items and payment details.",
+    operation_id="order_bike",
+    description="Submit a bike order with payment details. Includes M-Pesa STK push.",
     request={
         "application/json": {
             "type": "object",
             "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "integer", "example": 1},
-                            "quantity": {"type": "integer", "example": 2},
-                        },
-                        "required": ["id", "quantity"],
-                    },
+                "bike_id": {
+                    "type": "integer",
+                    "description": "ID of the bike being ordered.",
                 },
-                "payment_number": {"type": "string", "example": "0712345678"},
+                # "payment_no": {
+                #     "type": "string",
+                #     "description": "Phone number to use for payment.",
+                # },
+                "usage_time": {
+                    "type": "string",
+                    "description": "Duration in hours for which the bike is rented (e.g., '1', '2', '3', '8', '24').",
+                },
             },
-            "required": ["items", "payment_number"],
+            "required": ["bike_id", "payment_no", "usage_time"],
         }
     },
     responses={
-        200: OpenApiResponse(description="Order submitted successfully."),
-        422: OpenApiResponse(
-            description="Validation errors.",
-            examples={
-                "application/json": {"message": ["At least one item should be given."]}
+        200: {
+            "description": "Order placed successfully.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Order placed successfully.",
+                        "order_id": 123,
+                        "payment_status": "pending",
+                    }
+                }
             },
-        ),
+        },
+        400: {
+            "description": "Invalid request data.",
+            "content": {"application/json": {"example": {"error": "Invalid data."}}},
+        },
     },
 )
-@api_view(
-    [
-        "POST",
-    ]
+@api_view(["POST"])
+def orderBike(request):
+    usage_time_prices = {"1": "2", "2": "150", "3": "200", "8": "400", "24": "500"}
+    user = request.account
+    account = user.id
+    data_with_account = request.data.copy()
+    data_with_account["account"] = account
+    data_with_account["item"] = data_with_account.get("bike_id")
+    data_with_account["active"] = True
+
+    usage_time = data_with_account.get("usage_time")
+    if not usage_time:
+        return Response({"error": "Usage time is required."}, status=400)
+
+    price = usage_time_prices.get(usage_time)
+    if not price:
+        return Response(
+            {
+                "error": f"Invalid usage time. Allowed values: {', '.join(usage_time_prices.keys())}."
+            },
+            status=400,
+        )
+
+    data_with_account["price"] = Decimal(price)
+
+    serializer = OrderItemSerializer(data=data_with_account)
+    if serializer.is_valid():
+        order = serializer.save()
+        order.start_time = timezone.now()
+        order.save()
+
+        return Response(
+            {
+                "message": "Bike order created successfully.",
+                "order_id": order.id,
+                "price": str(order.price),
+                "start_time": order.start_time,
+            },
+            status=201,
+        )
+    else:
+        return Response({"error": "Invalid data."}, status=400)
+
+
+@extend_schema(
+    operation_id="end_order",
+    description="End an active order and calculate the final price. Payment initiation is handled via Mpesa.",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "integer",
+                    "description": "The ID of the order to end.",
+                    "example": 12345,
+                },
+                "payment_no": {
+                    "type": "string",
+                    "description": "The phone number for Mpesa payment.",
+                    "example": "254712345678",
+                },
+            },
+            "required": ["order_id", "payment_no"],
+        }
+    },
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "example": "Order ended successfully."},
+                "order_id": {"type": "integer", "example": 12345},
+                "final_price": {"type": "string", "example": "120.50"},
+                "payment_status": {"type": "string", "example": "pending"},
+            },
+        },
+        400: {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Order ID and payment number are required.",
+                },
+            },
+        },
+        404: {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Order not found or already completed.",
+                },
+            },
+        },
+        500: {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string", "example": "An unexpected error occurred."},
+            },
+        },
+    },
 )
-def submit_order(request):
-    if request.method == "POST":
-        post_data = request.POST
-        # print(request.user_id)
-        # user = Account.objects.get(id=77)
-        user = request.account
-        account = user.id
-        print("my " + str(user.username))
-        # print(user.is_active)
-        data_with_account = request.data.copy()
-        # print(data_with_account)
-        data_with_account["account"] = account
-        serializer = OrderSerializer(data=data_with_account)
-        if serializer.is_valid():
-            order = serializer.save()
-            order.start_time = timezone.now()
-            order.save()
-            print(order.account)
-            cart_items = request.data.get("items", [])
+@api_view(["POST"])
+def endOrder(request):
+    try:
+        order_id = request.data.get("order_id")
+        if not order_id:
+            return Response({"error": "Order ID is required."}, status=400)
 
-            if len(cart_items) < 1:
-                return Response(
-                    status=422, data={"message": "Atleast one item should be given "}
-                )
+        order = OrderItem.objects.get(id=order_id, active=True)
+        order.end_time = timezone.now()
+        order.active = False
 
-            cumulativePrice = 0
-            for cart_item in cart_items:
-                item = Item.objects.get(id=cart_item["id"])
-                orderItem = OrderItem()
-                orderItem.item = item
-                orderItem.order = order
-                orderItem.price = item.price
-                orderItem.quantity = cart_item["quantity"]
-                cumulativePrice = cumulativePrice + orderItem.total()
-                orderItem.save()
-            order.total = cumulativePrice
-            order.save()
-            payer_phone = request.data.get("payment_number")
-            # access_token = "pbtAXlE4XTbAUx5N2e1ht0eR62MH"
-            mpesa_callback = "http://app.sasakonnect.net:23022/cart/callback"
-            mpesa_client = MpesaClient()
-            response = mpesa_client.make_stk_push(
-                order.total, payer_phone, mpesa_callback, "174379", "Pay for goods"
-            )
-            print(response["CheckoutRequestID"])
+        # Calculate actual usage time in minutes
+        duration = (order.end_time - order.start_time).total_seconds() / 60
+        expected_duration = int(
+            order.price / 100 * 60
+        )  # Derive expected duration from price
 
-            payment = Payment.objects.create(
-                phone_no=payer_phone, mpesa_transaction_id=response["CheckoutRequestID"]
-            )
-
-            order.payment = payment
-            order.save()
-
-            return Response(serializer.data)
-
+        if duration > expected_duration:
+            extra_time = duration - expected_duration
+            extra_five_min_blocks = (extra_time // 5) + (1 if extra_time % 5 else 0)
+            interest = Decimal(0.04) * extra_five_min_blocks * order.price
+            final_price = order.price + interest
         else:
-            print("not valid")
-            return Response(serializer.errors)
+            final_price = order.price
+
+        order.price = final_price
+        order.save()
+
+        mpesa_callback = "https://5750-105-29-165-233.ngrok-free.app/cart/callback/"
+
+        mpesa_client = MpesaClient()
+        payment_no = request.data.get("payment_no")
+
+        if not payment_no:
+            return Response({"error": "Payment number is required."}, status=400)
+
+        response = mpesa_client.make_stk_push(
+            float(order.price), payment_no, mpesa_callback, "174379", "Pay for goods"
+        )
+        payment = Payment.objects.create(
+            phone_no=payment_no, mpesa_transaction_id=response["CheckoutRequestID"]
+        )
+        print(response["CheckoutRequestID"])
+        order.payment = payment
+        order.save()
+        return Response(
+            {
+                "message": "Order ended successfully.",
+                "order_id": order.id,
+                "final_price": str(order.price),
+                "payment_status": "pending",
+            },
+            status=200,
+        )
+
+    except OrderItem.DoesNotExist:
+        return Response({"error": "Order not found or already completed."}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 
 @extend_schema(
@@ -127,9 +233,7 @@ def submit_order(request):
         }
     },
     responses={
-        200: OpenApiResponse(
-            description="Order item created successfully."
-        ),
+        200: OpenApiResponse(description="Order item created successfully."),
         400: OpenApiResponse(
             description="Validation errors.",
             examples={
@@ -155,100 +259,76 @@ def order_items(request):
     return Response(seralizer.data)
 
 
-@extend_schema(
-    operation_id="make_stk_push",
-    summary="Initiate STK push payment",
-    description="Initiate an STK push payment.",
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "amount": {"type": "number", "example": 100.0},
-                "phone_number": {"type": "string", "example": "0712345678"},
-                "callback_url": {"type": "string", "example": "http://example.com/callback"},
-                "account_reference": {"type": "string", "example": "Order123"},
-                "transaction_desc": {"type": "string", "example": "Payment for goods"},
-            },
-            "required": ["amount", "phone_number", "callback_url"],
-        }
-    },
-    responses={
-        200: OpenApiResponse(
-            description="STK push initiated successfully."
-        ),
-        400: OpenApiResponse(
-            description="Validation errors.",
-            examples={
-                "application/json": {
-                    "amount": ["This field is required."],
-                }
-            },
-        ),
-    },
-)
-@api_view(["POST", "GET"])
-def make_stk_push(request):
-    # Get the necessary data from the request
-    amount = request.data.get("amount")
-    phone_number = request.data.get("phone_number")
-    callback_url = request.data.get("callback_url")
-    account_reference = request.data.get("account_reference")
-    transaction_desc = request.data.get("transaction_desc")
+# @extend_schema(
+#     operation_id="make_stk_push",
+#     summary="Initiate STK push payment",
+#     description="Initiate an STK push payment.",
+#     request={
+#         "application/json": {
+#             "type": "object",
+#             "properties": {
+#                 "amount": {"type": "number", "example": 100.0},
+#                 "phone_number": {"type": "string", "example": "0712345678"},
+#                 "callback_url": {
+#                     "type": "string",
+#                     "example": "http://example.com/callback",
+#                 },
+#                 "account_reference": {"type": "string", "example": "Order123"},
+#                 "transaction_desc": {"type": "string", "example": "Payment for goods"},
+#             },
+#             "required": ["amount", "phone_number", "callback_url"],
+#         }
+#     },
+#     responses={
+#         200: OpenApiResponse(description="STK push initiated successfully."),
+#         400: OpenApiResponse(
+#             description="Validation errors.",
+#             examples={
+#                 "application/json": {
+#                     "amount": ["This field is required."],
+#                 }
+#             },
+#         ),
+#     },
+# )
+# @api_view(["POST", "GET"])
+# def make_stk_push(request):
+#     # Get the necessary data from the request
+#     amount = request.data.get("amount")
+#     phone_number = request.data.get("phone_number")
+#     callback_url = request.data.get("callback_url")
+#     account_reference = request.data.get("account_reference")
+#     transaction_desc = request.data.get("transaction_desc")
 
-    # Create an instance of the MpesaClient class with the access token
-    access_token = "F5ffBeCl03a4ikmV2s37aZbohwCG"
-    mpesa_client = MpesaClient(access_token)
+#     # Create an instance of the MpesaClient class with the access token
+#     access_token = "F5ffBeCl03a4ikmV2s37aZbohwCG"
+#     mpesa_client = MpesaClient(access_token)
 
-    # Make the STK push payment
-    response = mpesa_client.make_stk_push(
-        amount, phone_number, callback_url, "174379", "Pay for goods"
-    )
+#     # Make the STK push payment
+#     response = mpesa_client.make_stk_push(
+#         amount, phone_number, callback_url, "174379", "Pay for goods"
+#     )
 
-    # Return the response as the API response
-    return Response(response)
+#     # Return the response as the API response
+#     return Response(response)
 
 
-@extend_schema(
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "stkCallback": {
-                    "type": "object",
-                    "properties": {
-                        "ResultCode": {"type": "integer"},
-                        "CheckoutRequestID": {"type": "string"},
-                    },
-                    "required": ["ResultCode", "CheckoutRequestID"],
-                }
-            },
-            "required": ["stkCallback"],
-        }
-    },
-    responses={
-        200: {
-            "description": "Callback processed successfully",
-        }
-    },
-    description="Handles MPESA payment callbacks and updates the order status.",
-)
 @api_view(["POST"])
 def mpesa_callback(request):
-    print(request.data)
+    print("Full Callback Data: %s", request.data)
     json_response = request.data.get("Body", {}).get("stkCallback", {})
     result_code = json_response.get("ResultCode")
     if result_code == 0:
         mpesa_transaction_id = json_response.get("CheckoutRequestID")
-        print(mpesa_transaction_id)
+        print("Mpesa Transaction ID: %s", mpesa_transaction_id)
         try:
             data = Payment.objects.get(mpesa_transaction_id=mpesa_transaction_id)
-            order = Order.objects.get(payment=data.id)
+            order = OrderItem.objects.get(payment=data.id)
             order.confirmed = True
             order.save()
-            print(order)
-        except (Payment.DoesNotExist, Order.DoesNotExist):
+            print("Order Confirmed: %s", order)
+        except (Payment.DoesNotExist, OrderItem.DoesNotExist):
             return Response({"error": "Transaction or order not found"}, status=404)
-
     return Response(status=200)
 
 
@@ -257,9 +337,7 @@ def mpesa_callback(request):
     summary="Retrieve delivered orders",
     description="Retrieve all delivered orders.",
     responses={
-        200: OpenApiResponse(
-            description="List of delivered orders."
-        ),
+        200: OpenApiResponse(description="List of delivered orders."),
     },
 )
 @api_view(["GET"])
@@ -288,9 +366,7 @@ def delivered(request):
         }
     },
     responses={
-        200: OpenApiResponse(
-            description="Rating submitted successfully."
-        ),
+        200: OpenApiResponse(description="Rating submitted successfully."),
         400: OpenApiResponse(
             description="Validation errors.",
             examples={
@@ -333,9 +409,7 @@ def rate(request):
     summary="Retrieve user orders",
     description="Retrieve orders for the authenticated user.",
     responses={
-        200: OpenApiResponse(
-            description="List of user orders."
-        ),
+        200: OpenApiResponse(description="List of user orders."),
     },
 )
 @api_view(["GET"])
@@ -360,9 +434,7 @@ def userOrder(request):
     summary="End lease for an order",
     description="End the lease for a specific order.",
     responses={
-        200: OpenApiResponse(
-            description="Lease ended successfully."
-        ),
+        200: OpenApiResponse(description="Lease ended successfully."),
         404: OpenApiResponse(
             description="Order not found.",
         ),
@@ -386,9 +458,7 @@ def end_lease(request, order_id):
     summary="Calculate time spent on an order",
     description="Calculate the time spent on a specific order.",
     responses={
-        200: OpenApiResponse(
-            description="Time spent calculated successfully."
-        ),
+        200: OpenApiResponse(description="Time spent calculated successfully."),
         404: OpenApiResponse(
             description="Order not found.",
         ),

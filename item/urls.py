@@ -5,7 +5,7 @@ urlpatterns = [
     # path('shops/items', views.getItems),
      path('shops/allitems', views.normalGetItems),
     path('food/create/', views.createItem),
-    path('food/<str:pk>/', views.getItem),
+    path('bike/', views.getItem),
     path('food/<str:pk>/update/', views.updateItem),
     path('food/recommended', views.recommended),
     path('food/search', views.item_search_view),
