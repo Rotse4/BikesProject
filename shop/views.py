@@ -6,7 +6,7 @@ from account.models import Permission
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 # from account.permissions import has_perms
-from .models import Shop
+from .models import Roles, Shop
 from .serializers import RoleSerializer, ShopSerializer
 from rest_framework.decorators import api_view, APIView
 from account.permissions import has_perms
@@ -82,3 +82,56 @@ class RoleCreateAPIView(APIView):
 
             return Response(RoleSerializer(role).data, status=200)
         return Response(serializer.errors, status=400)
+    
+    
+
+class AssignRoleAPIView(APIView):
+    @extend_schema(
+        operation_id="assign_role",
+        summary="Assign a role to a user",
+        description="Assign an existing role to a user in the shop the user is logged into.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "integer", "example": 123},
+                    "role_id": {"type": "integer", "example": 1},
+                },
+                "required": ["user_id", "role_id"],
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description="Role assigned successfully."
+            ),
+            400: OpenApiResponse(
+                description="Validation errors.",
+                examples={
+                    "application/json": {
+                        "user_id": ["This field is required."],
+                        "role_id": ["Invalid role ID."],
+                    }
+                },
+            ),
+        },
+    )
+    @method_decorator(has_perms(["can_update"]))
+    def post(self, request, *args, **kwargs):
+        user_id = request.data.get("user_id")
+        role_id = request.data.get("role_id")
+
+        # Get the shop associated with the logged-in user
+        shop = request.shop  # Assumed that the user's shop is stored in the request object
+
+        # Validate role existence in the shop
+        role = get_object_or_404(Roles, id=role_id, shop=shop)
+
+        # Assign role to user
+        user = get_object_or_404(Roles, id=user_id)
+        user.role = role
+        user.save()
+
+        return Response(
+            {"message": "Role assigned successfully."},
+            status=200,
+        )

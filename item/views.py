@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, APIView
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema,OpenApiParameter, OpenApiTypes
 from account.permissions import has_perms
 from .serializers import ItemSerializer
 from .models import Item
@@ -44,33 +44,40 @@ def normalGetItems(request):
 @extend_schema(
     parameters=[
         {
-            "name": "pk",
-            "in": "path",
+            "name": "id",
+            "in": "query",
             "required": True,
-            "description": "Item ID",
+            "description": "The ID of the item to retrieve.",
             "schema": {"type": "integer"},
-        }
+        },
     ],
-    responses={200: ItemSerializer()},
+    responses={
+        200: ItemSerializer,
+        400: {"description": "Bad Request - Invalid or missing parameters"},
+        404: {"description": "Not Found - Item does not exist"},
+    },
 )
 @api_view(["GET"])
 @has_perms(["can_add"])
-def getItem(request):
+def getItem(request,item_id):
+    # item_id = request.GET.get("id")
+
+    if not item_id:
+        return Response({"error": "The 'id' query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        # Retrieve the 'id' query parameter
-        item_id = request.GET.get("id")
+        # Convert item_id to integer and validate
+        item_id = int(item_id)
+    except ValueError:
+        return Response({"error": "The 'id' query parameter must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not item_id:
-            return Response({"error": "Missing 'id' query parameter"}, status=400)
-
+    try:
         # Fetch the item from the database
         item = Item.objects.get(id=item_id)
         serializer = ItemSerializer(item)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     except Item.DoesNotExist:
-        return Response({"error": "Item not found"}, status=404)
-    except ValueError:
-        return Response({"error": "Invalid 'id' value"}, status=400)
+        return Response({"error": f"Item with id {item_id} not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @extend_schema(request=ItemSerializer, responses={201: ItemSerializer()})
@@ -89,7 +96,7 @@ def createItem(request):
 
 @extend_schema(request=ItemSerializer, responses={200: ItemSerializer()})
 @api_view(["PUT"])
-@has_perms(["can_edit"])
+@has_perms(["can_update"])
 def updateItem(request, pk):
     try:
         food = Item.objects.get(id=pk)
@@ -103,9 +110,15 @@ def updateItem(request, pk):
     return Response(serializer.errors, status=400)
 
 
+@extend_schema(
+    responses={
+        200: ItemSerializer(many=True),
+    },
+    description="Retrieve a list of recommended, popular, favorite, or featured items",
+)
 @api_view(["GET"])
 def recommended(request):
-    items = ItemSerializer.objects.filter(
+    items = Item.objects.filter(
         Q(category="popular")
         | Q(category="recommended")
         | Q(category="favorate")
@@ -115,6 +128,16 @@ def recommended(request):
     return Response({"orders": serializer.data})
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='q', type=OpenApiTypes.STR, description='Search query for item title or description'),
+        OpenApiParameter(name='category', type=OpenApiTypes.STR, description='Filter items by category')
+    ],
+    responses={
+        200: ItemSerializer(many=True),
+    },
+    description="Search for items by query or category",
+)
 @api_view(["GET"])
 def item_search_view(request):
     query = request.GET.get("q", None)
