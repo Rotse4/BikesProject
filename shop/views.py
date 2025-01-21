@@ -2,7 +2,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 
-from account.models import Permission
+from account.models import Account, Permission
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 # from account.permissions import has_perms
@@ -61,7 +61,7 @@ class RoleCreateAPIView(APIView):
             ),
         },
     )
-    @method_decorator(has_perms(["roles_contro_perm"]))
+    @method_decorator(has_perms(["roles_control_perm"]))
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
         data["shop"] = request.shop_id
@@ -111,21 +111,23 @@ class AssignRoleAPIView(APIView):
             ),
         },
     )
-    @method_decorator(has_perms(["roles_contro_perm"]))
+    @method_decorator(has_perms(["roles_control_perm"]))
     def post(self, request, *args, **kwargs):
         user_id = request.data.get("user_id")
         role_id = request.data.get("role_id")
 
         # Get the shop associated with the logged-in user
         shop = (
-            request.shop_user
+            request.shop_id
         )  # Assumed that the user's shop is stored in the request object
 
         # Validate role existence in the shop
+        print(f"role iss {shop}")
         role = get_object_or_404(Roles, id=role_id, shop=shop)
-
+        print(f"role is {role}")
         # Assign role to user
-        user = get_object_or_404(Roles, id=user_id)
+        user = get_object_or_404(Account, id=user_id)
+        print(f"assigne {user}")
         user.role = role
         user.save()
 
