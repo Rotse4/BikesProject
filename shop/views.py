@@ -6,7 +6,7 @@ from account.models import Account, Permission
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 # from account.permissions import has_perms
-from .models import Roles, Shop
+from .models import Roles, Shop, ShopUSer
 from .serializers import PermissionSerializer, RoleSerializer, ShopSerializer
 from rest_framework.decorators import api_view, APIView
 from account.permissions import has_perms
@@ -29,7 +29,7 @@ def shop_list(request):
 class RoleCreateAPIView(APIView):
     @extend_schema(
         operation_id="create_role",
-        summary="Create a new role",
+        summary="Create a new role requires[roles_control_permissions]",
         description="Create a new role with a name, permissions, and associated shop. Copy the permission id from the above view prmissions api",
         request={
             "application/json": {
@@ -61,15 +61,13 @@ class RoleCreateAPIView(APIView):
             ),
         },
     )
-    @method_decorator(has_perms(["roles_control_perm"]))
+    @method_decorator(has_perms(["roles_control_permissions"]))
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
         data["shop"] = request.shop_id
         serializer = RoleSerializer(data=data)
         if serializer.is_valid():
             # Check if shop exists and is valid
-            shop_id = request.data.get(request.shop_id)
-            print(f"shop is {request.shop_id}")
             shop = get_object_or_404(Shop, id=request.shop_id)
             # print(f"shop is {shop_id}")
 
@@ -88,7 +86,7 @@ class RoleCreateAPIView(APIView):
 class AssignRoleAPIView(APIView):
     @extend_schema(
         operation_id="assign_role",
-        summary="Assign a role to a user",
+        summary="Assign a role to a user requires[roles_control_permissions]",
         description="Assign an existing role to a user in the shop the user is logged into.",
         request={
             "application/json": {
@@ -113,35 +111,42 @@ class AssignRoleAPIView(APIView):
             ),
         },
     )
-    @method_decorator(has_perms(["roles_control_perm"]))
+    @method_decorator(has_perms(["roles_control_permissions"]))
     def post(self, request, *args, **kwargs):
         user_id = request.data.get("user_id")
         role_id = request.data.get("role_id")
 
-        # Get the shop associated with the logged-in user
-        shop = (
-            request.shop_id
-        )  # Assumed that the user's shop is stored in the request object
+        if not user_id or not role_id:
+            return Response(
+                {"error": "Both user_id and role_id are required."},
+                status=400,
+            )
 
-        # Validate role existence in the shop
-        print(f"role iss {shop}")
+        # Get the shop associated with the logged-in user
+        shop = request.shop_id  # Assuming the user's shop is stored in the request object
+
+        # Validate that the role exists in the shop
         role = get_object_or_404(Roles, id=role_id, shop=shop)
-        print(f"role is {role}")
-        # Assign role to user
+
+        # Validate that the user exists
         user = get_object_or_404(Account, id=user_id)
-        print(f"assigne {user}")
-        user.role = role
-        user.save()
+
+        # Create or update ShopUser
+        shop_user, created = ShopUSer.objects.update_or_create(
+            shop=Shop.objects.get(id=shop),
+            user=user,
+            defaults={"role": role},
+        )
 
         return Response(
-            {"message": "Role assigned successfully."},
+            {"message": "Role assigned successfully.", "created": created},
             status=200,
         )
 
 
 @extend_schema(
     operation_id="view Permissions",
-    summary="View Permissions",
+    summary="View Permissions requires[roles_control_permissions]",
     tags=["roles"],
     # description="Create a new role with a name, permissions, and associated shop.",
 )

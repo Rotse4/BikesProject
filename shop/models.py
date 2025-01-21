@@ -56,6 +56,7 @@ class Shop(models.Model):
 #     class Meta:
 #         db_table = 'UserShopRole'
 
+
 class Roles(models.Model):
     name = models.CharField(max_length=50)
     permissions = models.ManyToManyField(Permission)
