@@ -7,7 +7,7 @@ from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 # from account.permissions import has_perms
 from .models import Roles, Shop
-from .serializers import RoleSerializer, ShopSerializer
+from .serializers import PermissionSerializer, RoleSerializer, ShopSerializer
 from rest_framework.decorators import api_view, APIView
 from account.permissions import has_perms
 from drf_spectacular.utils import extend_schema
@@ -30,23 +30,22 @@ class RoleCreateAPIView(APIView):
     @extend_schema(
         operation_id="create_role",
         summary="Create a new role",
-        description="Create a new role with a name, permissions, and associated shop.",
-         request={
+        description="Create a new role with a name, permissions, and associated shop. Copy the permission id from the above view prmissions api",
+        request={
             "application/json": {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "example": "Manager"},
                     "permissions": {
                         "type": "array",
-                        "items": {"type": "String"},
-                        "example": ["can_view", "can_delete", "can_add","can_edit"],
+                        "items": {"type": "integer"},
+                        "example": [1, 2, 4],
                     },
                 },
                 "required": ["name"],
             }
         },
-         
-         responses={
+        responses={
             200: OpenApiResponse(
                 # response=RoleSerializer,
                 description="Role created successfully."
@@ -62,28 +61,27 @@ class RoleCreateAPIView(APIView):
             ),
         },
     )
-    @method_decorator(has_perms(["can_add"]))
+    @method_decorator(has_perms(["roles_contro_perm"]))
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
         data["shop"] = request.shop_id
         serializer = RoleSerializer(data=data)
         if serializer.is_valid():
             # Check if shop exists and is valid
-            shop_id = request.data.get('shop')
+            shop_id = request.data.get("shop")
             shop = get_object_or_404(Shop, id=shop_id)
 
             # Save the role
             role = serializer.save(shop=shop)
 
             # Handle permissions (if needed, e.g., by ID list)
-            permission_ids = request.data.get('permissions', [])
+            permission_ids = request.data.get("permissions", [])
             permissions = Permission.objects.filter(id__in=permission_ids)
             role.permissions.set(permissions)
 
             return Response(RoleSerializer(role).data, status=200)
         return Response(serializer.errors, status=400)
-    
-    
+
 
 class AssignRoleAPIView(APIView):
     @extend_schema(
@@ -101,9 +99,7 @@ class AssignRoleAPIView(APIView):
             }
         },
         responses={
-            200: OpenApiResponse(
-                description="Role assigned successfully."
-            ),
+            200: OpenApiResponse(description="Role assigned successfully."),
             400: OpenApiResponse(
                 description="Validation errors.",
                 examples={
@@ -115,13 +111,15 @@ class AssignRoleAPIView(APIView):
             ),
         },
     )
-    @method_decorator(has_perms(["can_update"]))
+    @method_decorator(has_perms(["roles_contro_perm"]))
     def post(self, request, *args, **kwargs):
         user_id = request.data.get("user_id")
         role_id = request.data.get("role_id")
 
         # Get the shop associated with the logged-in user
-        shop = request.shop  # Assumed that the user's shop is stored in the request object
+        shop = (
+            request.shop_user
+        )  # Assumed that the user's shop is stored in the request object
 
         # Validate role existence in the shop
         role = get_object_or_404(Roles, id=role_id, shop=shop)
@@ -135,3 +133,18 @@ class AssignRoleAPIView(APIView):
             {"message": "Role assigned successfully."},
             status=200,
         )
+
+
+@extend_schema(
+    operation_id="view Permissions",
+    summary="View Permissions",
+    tags=["roles"],
+    # description="Create a new role with a name, permissions, and associated shop.",
+)
+class PermissionListAPIView(APIView):
+    # permission_classes = [IsAuthenticated]  # Only allow authenticated users
+
+    def get(self, request, *args, **kwargs):
+        permissions = Permission.objects.all()  # Fetch all permissions
+        serializer = PermissionSerializer(permissions, many=True)
+        return Response(serializer.data, status=200)
