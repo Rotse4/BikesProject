@@ -68,8 +68,10 @@ class RoleCreateAPIView(APIView):
         serializer = RoleSerializer(data=data)
         if serializer.is_valid():
             # Check if shop exists and is valid
-            shop_id = request.data.get("shop")
-            shop = get_object_or_404(Shop, id=shop_id)
+            shop_id = request.data.get(request.shop_id)
+            print(f"shop is {request.shop_id}")
+            shop = get_object_or_404(Shop, id=request.shop_id)
+            # print(f"shop is {shop_id}")
 
             # Save the role
             role = serializer.save(shop=shop)
