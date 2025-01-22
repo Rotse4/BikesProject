@@ -94,7 +94,8 @@ def createItem(request):
     return Response(serializer.errors, status=400)
 
 
-@extend_schema(request=ItemSerializer, responses={200: ItemSerializer()})
+@extend_schema(request=ItemSerializer, responses={200: ItemSerializer()},
+               summary="Update bike  requires[can_update_item]",)
 @api_view(["PUT"])
 @has_perms(["can_update_item"])
 def updateItem(request, pk):
