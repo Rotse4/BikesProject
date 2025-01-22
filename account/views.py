@@ -419,6 +419,7 @@ def _generate_token_response(account, shop):
             "username": account.username,
             "id": account.pk,
             "shop_id": str(shop.id),  # Send the selected shop ID
+            "shopname": str(shop.name)
         }
 
     access_token = TokenBuilder.accessToken(payload=data)
