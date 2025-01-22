@@ -96,7 +96,7 @@ def createItem(request):
 
 @extend_schema(request=ItemSerializer, responses={200: ItemSerializer()})
 @api_view(["PUT"])
-@has_perms(["can_update"])
+@has_perms(["can_update_item"])
 def updateItem(request, pk):
     try:
         food = Item.objects.get(id=pk)
