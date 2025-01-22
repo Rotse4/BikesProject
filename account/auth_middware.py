@@ -16,14 +16,16 @@ class TokenAuthenticationMiddleware:
     def __call__(self, request):
         excluded_routes = [
             '/user/register', '/user/userLogin','/user/adminLogin', '/user/', '/favicon.ico',
-            '/cart/callback/', '/account/refresh', '/schema',
+            '/cart/callback/', '/account/refresh', '/schema', '/media/path/'
         ]
 
         if (request.path in excluded_routes or
             request.path.startswith('/admin/') or
             request.path.startswith('/static/') or
             request.path.startswith('/media/images/') or
-            request.path.startswith('/api/')):
+            request.path.startswith('/api/') or
+            request.path.startswith('/media/')
+            ):
             return self.get_response(request)
 
         # Get the access token from the request header
