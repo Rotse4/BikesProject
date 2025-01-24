@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, APIView
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema,OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from account.permissions import has_perms
 from .serializers import ItemSerializer
 from .models import Item
@@ -59,17 +59,23 @@ def normalGetItems(request):
 )
 @api_view(["GET"])
 @has_perms(["can_add"])
-def getItem(request,item_id):
+def getItem(request, item_id):
     # item_id = request.GET.get("id")
 
     if not item_id:
-        return Response({"error": "The 'id' query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "The 'id' query parameter is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         # Convert item_id to integer and validate
         item_id = int(item_id)
     except ValueError:
-        return Response({"error": "The 'id' query parameter must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "The 'id' query parameter must be an integer."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         # Fetch the item from the database
@@ -77,12 +83,15 @@ def getItem(request,item_id):
         serializer = ItemSerializer(item)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Item.DoesNotExist:
-        return Response({"error": f"Item with id {item_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"error": f"Item with id {item_id} not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
 
 @extend_schema(request=ItemSerializer, responses={201: ItemSerializer()})
 @api_view(["POST"])
-@has_perms(["can_add"], shop_required=True)
+@has_perms(["can_update_bikes"], shop_required=True)
 def createItem(request):
     data = request.data.copy()
     data["shop"] = request.shop_id
@@ -94,8 +103,11 @@ def createItem(request):
     return Response(serializer.errors, status=400)
 
 
-@extend_schema(request=ItemSerializer, responses={200: ItemSerializer()},
-               summary="Update bike  requires[can_update_item]",)
+@extend_schema(
+    request=ItemSerializer,
+    responses={200: ItemSerializer()},
+    summary="Update bike  requires[can_update_item]",
+)
 @api_view(["PUT"])
 @has_perms(["can_update_item"])
 def updateItem(request, pk):
@@ -131,8 +143,16 @@ def recommended(request):
 
 @extend_schema(
     parameters=[
-        OpenApiParameter(name='q', type=OpenApiTypes.STR, description='Search query for item title or description'),
-        OpenApiParameter(name='category', type=OpenApiTypes.STR, description='Filter items by category')
+        OpenApiParameter(
+            name="q",
+            type=OpenApiTypes.STR,
+            description="Search query for item title or description",
+        ),
+        OpenApiParameter(
+            name="category",
+            type=OpenApiTypes.STR,
+            description="Filter items by category",
+        ),
     ],
     responses={
         200: ItemSerializer(many=True),
