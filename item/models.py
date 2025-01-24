@@ -91,7 +91,7 @@ class Item(models.Model):
                     print(f"Error downloading image from {image_url}: {e}")
 
         # Populate image fields from URLs
-        download_image_from_url("image", "image_url")
+        # download_image_from_url("image", "image_url")
         download_image_from_url("image1", "image1_url")
         download_image_from_url("image2", "image2_url")
         download_image_from_url("image3", "image3_url")
