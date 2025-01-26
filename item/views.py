@@ -94,8 +94,8 @@ def getItem(request, item_id):
 @has_perms(["can_update_bikes"], shop_required=True)
 def createItem(request):
     data = request.data.copy()
-    data["shop"] = request.shop_id
-    print(f"shop id now {data['shop']}")
+    # Use the validated shop ID from the permission decorator
+    data["shop"] = request.validated_shop_id
     serializer = ItemSerializer(data=data)
     if serializer.is_valid():
         serializer.save()
@@ -109,15 +109,19 @@ def createItem(request):
     summary="Update bike  requires[can_update_item]",
 )
 @api_view(["PUT"])
-@has_perms(["can_update_item"])
+@has_perms(["can_update_item"], shop_required=True)
 def updateItem(request, pk):
     try:
-        food = Item.objects.get(id=pk)
+        # Only get items from the user's shop
+        food = Item.objects.get(id=pk, shop_id=request.validated_shop_id)
     except Item.DoesNotExist:
-        return Response({"error": "Item not found"}, status=404)
+        return Response({"error": "Item not found or you don't have permission to update it"}, status=404)
 
     serializer = ItemSerializer(food, data=request.data)
     if serializer.is_valid():
+        # Ensure the shop ID cannot be changed
+        if 'shop' in serializer.validated_data:
+            serializer.validated_data['shop'] = food.shop
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
@@ -160,11 +164,13 @@ def recommended(request):
     description="Search for items by query or category",
 )
 @api_view(["GET"])
+@has_perms(["can_view"], shop_required=True)
 def item_search_view(request):
     query = request.GET.get("q", None)
     category = request.GET.get("category", None)
 
-    queryset = Item.objects.all()
+    # Only search within the user's shop
+    queryset = Item.objects.filter(shop_id=request.validated_shop_id)
 
     if query:
         queryset = queryset.filter(

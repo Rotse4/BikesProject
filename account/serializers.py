@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
-from shop.models import Shop
+from shop.models import Roles, Shop
 from. models import Permission, User, Account
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -44,4 +44,9 @@ class AccountSerealizer(serializers.ModelSerializer):
 class SelectShopSerializer (serializers.ModelSerializer):
     class Meta:
         model = Shop
+        fields = '__all__'
+
+class RoleSerializer (serializers.ModelSerializer):
+    class Meta:
+        model = Roles
         fields = '__all__'

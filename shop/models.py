@@ -66,7 +66,8 @@ class Roles(models.Model):
         return self.name[0:50]
 
     class Meta:
-        db_table = "Role"
+        db_table = "Role"   
+        unique_together = ('name', 'shop')  #
 
 
 class ShopUSer(models.Model):
@@ -85,8 +86,4 @@ class ShopUSer(models.Model):
 
     class Meta:
         db_table = "ShopUser"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["shop", "user"], name="unique_user_per_shop"
-            )
-        ]
+        unique_together = ('name', 'shop')

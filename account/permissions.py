@@ -8,11 +8,11 @@ from .serializers import PermissionSerializer
 def get_user_role(account, shop_user):
     print(f"shop_user {shop_user}")
     try:
-        # Ensure you're correctly querying the `ShopUSer` model
-        shop_user =  ShopUSer.objects.get(id=shop_user)
+        # Ensure you're correctly querying the `ShopUser` model
+        shop_user = ShopUSer.objects.get(id=shop_user)
 
         print(f"shop_user {shop_user.shop}")
-        role = shop_user.role
+        role = shop_user.role  # Return the actual role object
         shop = shop_user.shop
         print(f"shop_user {role} {shop}")
 
@@ -36,8 +36,8 @@ def has_perms(perm_names, shop_required=False):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            role = None  # Initialize role to avoid UnboundLocalError
-            shop = None  # Initialize shop to avoid UnboundLocalError
+            role = None
+            shop = None
             if request.account.is_authenticated:
                 shop_user = getattr(request, "shop_user", None)
                 print(f"shop_useer {shop_user}")
@@ -46,8 +46,28 @@ def has_perms(perm_names, shop_required=False):
 
                     role = user_role.get("role")
                     shop = user_role.get("shop")
+                    print(f"shop is {shop}")
+                    
 
                 if role:
+                    # Always verify that the role belongs to the current shop, regardless of shop_required
+                    if role.shop_id != shop.id:
+                        return Response(
+                            f"This role {role} is not valid for this shop.",
+                            status=403,
+                        )
+                    print(f"comparison {role.shop_id} and {shop.id}")
+                    # If shop access is specifically required, do additional shop validation
+                    if shop_required: 
+                        shop_id = request.shop_id
+                        if str(shop.id) != str(shop_id):
+                            return Response(
+                                "You don't have permission to access this shop.",
+                                status=403,
+                            )
+                        # Store the validated shop ID for later use
+                        request.validated_shop_id = shop.id
+                        
                     # Check if the user has all the required permissions
                     missing_perms = [
                         perm
@@ -57,15 +77,33 @@ def has_perms(perm_names, shop_required=False):
                     if not missing_perms:
                         # If shop access is required, validate the shop
                         if shop_required:
-                            shop_id = request.shop_id
-                            print(f"shop_id {shop_id}")
-                            if str(shop.id) == str(shop_id):
-                                return view_func(request, *args, **kwargs)
-                            else:
-                                return Response(
-                                    "You don't have permission to access this shop.",
-                                    status=403,
-                                )
+                            # Wrap the view function to validate items belong to the shop
+                            response = view_func(request, *args, **kwargs)
+                            
+                            # If it's a Response object with data, verify items belong to shop
+                            if isinstance(response, Response) and hasattr(response, 'data'):
+                                data = response.data
+                                # If it's a list of items
+                                if isinstance(data, list) or (isinstance(data, dict) and 'foods' in data):
+                                    items = data if isinstance(data, list) else data.get('foods', [])
+                                    # Filter out items that don't belong to this shop
+                                    filtered_items = [
+                                        item for item in items
+                                        if str(item.get('shop')) == str(shop.id)
+                                    ]
+                                    if isinstance(data, list):
+                                        response.data = filtered_items
+                                    else:
+                                        response.data['foods'] = filtered_items
+                                # If it's a single item
+                                elif isinstance(data, dict) and 'shop' in data:
+                                    if str(data['shop']) != str(shop.id):
+                                        return Response(
+                                            "You don't have permission to access this item.",
+                                            status=403,
+                                        )
+                            return response
+
                         else:
                             return view_func(request, *args, **kwargs)
 

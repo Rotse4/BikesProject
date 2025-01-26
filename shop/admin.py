@@ -13,7 +13,7 @@ admin.site.register(Shop, ShopAdmin)
 
 class RoleAdmin(admin.ModelAdmin):
     model = Roles
-    list_display = ("id","name")
+    list_display = ("id","name", "shop")
     
 admin.site.register(Roles, RoleAdmin)
 

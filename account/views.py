@@ -3,14 +3,16 @@ from rest_framework.decorators import api_view, APIView
 from account.models import Account
 
 # from account.permissions import has_perms
+from account.permissions import has_perms
 from shop.models import Roles, ShopUSer
-from .serializers import AccountSerealizer, SelectShopSerializer
+from .serializers import AccountSerealizer, RoleSerializer, SelectShopSerializer
 
 # from .auth_middware import TokenAuthenticationMiddleware
 from drf_spectacular.utils import extend_schema
 import datetime
 from rest_framework.response import Response
 import jwt
+from django.utils.decorators import method_decorator
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
@@ -406,6 +408,7 @@ def _generate_token_response(user, shop):
         status=200,
     )
 
+
 def _generate_token_response(account, shop):
     if shop == None:
         data = {
@@ -419,7 +422,7 @@ def _generate_token_response(account, shop):
             "username": account.username,
             "id": account.pk,
             "shop_id": str(shop.id),  # Send the selected shop ID
-            "shop_name": str(shop.name)
+            "shop_name": str(shop.name),
         }
 
     access_token = TokenBuilder.accessToken(payload=data)
@@ -505,10 +508,31 @@ def viewUsers(request):
 
 
 class ShopList(APIView):
+    @method_decorator(has_perms(["roles_control_permissions"], shop_required=True))
     def get(self, request, format=None):
+        # Get the shop_id from the request (set by middleware or authentication)
+        shop_id = request.validated_shop_id
+        # print(f"shop iddd {shop_id}")
 
-        roles = Roles.objects.all()
-        roles_data = [{"id": role.id, "name": role.name} for role in roles]
-        
-        print("request.account")
-        return Response(roles_data, status=200)
+        if not shop_id:
+            return Response(
+                {"error": "User is not associated with a shop or shop ID is missing"},
+                status=400,
+            )
+
+        # Filter roles that belong to the user's shop
+        roles = Roles.objects.filter(
+            shop_id=shop_id
+        )  # Assuming Roles has a shop_id field
+        print(f"roles: {roles}")  # Debugging output
+
+        if not roles.exists():  # Handle empty roles case
+            return Response(
+                {"error": "No roles found for the provided shop ID"}, status=404
+            )
+
+        # Serialize roles data
+        # roles_data = [{"id": role.id, "name": role.name} for role in roles]
+        serializer = RoleSerializer(roles, many=True)
+
+        return Response(serializer.data, status=200)
