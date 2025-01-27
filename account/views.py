@@ -5,6 +5,7 @@ from account.models import Account
 # from account.permissions import has_perms
 from account.permissions import has_perms
 from shop.models import Roles, ShopUSer
+from shop.serializers import ShopUserSerializer
 from .serializers import AccountSerealizer, RoleSerializer, SelectShopSerializer
 
 # from .auth_middware import TokenAuthenticationMiddleware
@@ -495,19 +496,36 @@ def select_shop(request):
 
 # @extend_schema
 @api_view(["GET"])
-# @has_perms('can_edit')
+@has_perms(["roles_control_permissions"], shop_required=True)  # Check permissions and shop association
 def viewUsers(request):
-    if request.account.is_authenticated:
-        print(f"Authenticated user: {request.account.username}")
-    else:
-        print("User is not authenticated")
+    # Check if the user is authenticated
+    if not request.account.is_authenticated:
+        return Response({"error": "User is not authenticated"}, status=401)
 
-    users = Account.objects.all()
-    serializer = AccountSerealizer(users, many=True)
-    return Response({"users": serializer.data})
+    # Get the shop ID of the logged-in user
+    shop_id = request.validated_shop_id  # Assuming middleware or decorators set this
+    print(f"Authenticated user: {request.account.username}, shop_id: {shop_id}")
+
+    if not shop_id:
+        return Response(
+            {"error": "User is not associated with a shop or shop ID is missing"},
+            status=400,
+        )
+
+    # Filter users by the shop ID
+    users = ShopUSer.objects.filter(shop_id=shop_id)  # Ensure Account has a `shop_id` field
+
+    # Serialize the filtered users
+    serializer = ShopUserSerializer(users, many=True)
+
+    return Response({"users": serializer.data}, status=200)
 
 
 class ShopList(APIView):
+    @extend_schema(
+        summary="get all roles in a specific shop requires[roles_control_permissions]",
+        tags=["roles"]
+    )
     @method_decorator(has_perms(["roles_control_permissions"], shop_required=True))
     def get(self, request, format=None):
         # Get the shop_id from the request (set by middleware or authentication)
