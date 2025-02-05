@@ -9,9 +9,16 @@ class ShopSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'owner', 'cdate', 'udate']
         
 class RoleSerializer(serializers.ModelSerializer):
+    permissions = serializers.SlugRelatedField(
+        many=True,
+        slug_field='name',
+        queryset=Permission.objects.all(),
+    )
+
     class Meta:
         model = Roles
         fields = ['id', 'name', 'permissions', 'shop']
+        read_only_fields = ['shop']  # Shop is set by the view, not the request
         
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
