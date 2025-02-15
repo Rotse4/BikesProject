@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
+from account.permissions import has_perms
 from cart.serializers import OrderItemSerializer
 from cart.daraja import MpesaClient
 from cart.models import OrderItem, Payment
@@ -472,3 +473,17 @@ def time_spent(request, order_id):
         return Response({"time_spent": str(time_spent)})
     except Order.DoesNotExist:
         return Response({"error": "Order not found"}, status=404)
+
+
+@extend_schema(
+    request=None,  # No request body expected in Swagger
+    responses={200: OrderItemSerializer(many=True)},
+    summary="Update bike requires [can_update_item]",
+)
+@api_view(["POST"])
+@has_perms(["can_update_bikes"], shop_required=True)
+def shopOrders(request):
+    orders = OrderItem.objects.filter(item__shop_id=request.validated_shop_id)  # Use filter to avoid exceptions
+
+    serializer = OrderItemSerializer(orders, many=True)
+    return Response(serializer.data)  # Ensure the Response object is returned

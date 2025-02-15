@@ -13,4 +13,5 @@ urlpatterns = [
     path("time_spent/<int:order_id>/", views.time_spent),
     path("order", views.orderBike),
     path("end_order", views.endOrder),
+    path("getShopSpecificOrders", views.shopOrders),
 ]
