@@ -486,4 +486,5 @@ def shopOrders(request):
     orders = OrderItem.objects.filter(item__shop_id=request.validated_shop_id)  # Use filter to avoid exceptions
 
     serializer = OrderItemSerializer(orders, many=True)
-    return Response(serializer.data)  # Ensure the Response object is returned
+    print(serializer.data)
+    return Response({"data":serializer.data})  # Ensure the Response object is returned
