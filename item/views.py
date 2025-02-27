@@ -58,9 +58,9 @@ def normalGetItems(request):
     },
 )
 @api_view(["GET"])
-@has_perms(["can_add"])
-def getItem(request, item_id):
-    # item_id = request.GET.get("id")
+# @has_perms(["can_add"])
+def getItem(request):
+    item_id = request.GET.get("id")
 
     if not item_id:
         return Response(

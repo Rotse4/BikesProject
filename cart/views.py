@@ -2,14 +2,21 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiResponse,
+    OpenApiExample,
+    OpenApiParameter,
+)
 
 from account.permissions import has_perms
-from cart.serializers import OrderItemSerializer
+from cart.serializers import OrderDurationSerializer, OrderItemSerializer
 from cart.daraja import MpesaClient
 from cart.models import OrderItem, Payment
 from item.models import Item
 from decimal import Decimal
+
+from shop.models import OrderDuration, Shop
 
 
 # Create your views here.
@@ -26,13 +33,13 @@ from decimal import Decimal
                     "type": "integer",
                     "description": "ID of the bike being ordered.",
                 },
-                # "payment_no": {
-                #     "type": "string",
-                #     "description": "Phone number to use for payment.",
-                # },
-                "usage_time": {
+                "payment_no": {
                     "type": "string",
-                    "description": "Duration in hours for which the bike is rented (e.g., '1', '2', '3', '8', '24').",
+                    "description": "Phone number to use for payment.",
+                },
+                "usage_time": {
+                    "type": "integer",
+                    "description": "Duration in hours for which the bike is rented (e.g., 1, 2, 3, 8, 24).",
                 },
             },
             "required": ["bike_id", "payment_no", "usage_time"],
@@ -59,7 +66,6 @@ from decimal import Decimal
 )
 @api_view(["POST"])
 def orderBike(request):
-    usage_time_prices = {"1": "2", "2": "150", "3": "200", "8": "400", "24": "500"}
     user = request.account
     account = user.id
     data_with_account = request.data.copy()
@@ -68,25 +74,33 @@ def orderBike(request):
     data_with_account["active"] = True
 
     usage_time = data_with_account.get("usage_time")
+
     if not usage_time:
         return Response({"error": "Usage time is required."}, status=400)
 
-    price = usage_time_prices.get(usage_time)
-    if not price:
+    try:
+        order_duration = OrderDuration.objects.get(
+            time=str(usage_time)
+        )  # Ensure string match
+        price = Decimal(order_duration.price)  # Convert price from string to Decimal
+    except OrderDuration.DoesNotExist:
+        valid_times = list(OrderDuration.objects.values_list("time", flat=True))
         return Response(
             {
-                "error": f"Invalid usage time. Allowed values: {', '.join(usage_time_prices.keys())}."
+                "error": f"Invalid usage time. Allowed values: {', '.join(map(str, valid_times))}."
             },
             status=400,
         )
 
-    data_with_account["price"] = Decimal(price)
+    data_with_account["price"] = price
 
     serializer = OrderItemSerializer(data=data_with_account)
     if serializer.is_valid():
         order = serializer.save()
         order.start_time = timezone.now()
         order.save()
+
+        print(f"Order active is {order.active}")
 
         return Response(
             {
@@ -98,7 +112,7 @@ def orderBike(request):
             status=201,
         )
     else:
-        return Response({"error": "Invalid data."}, status=400)
+        return Response({"error": serializer.errors}, status=400)
 
 
 @extend_schema(
@@ -228,9 +242,9 @@ def endOrder(request):
             "type": "object",
             "properties": {
                 "item": {"type": "integer", "example": 1},
-                "quantity": {"type": "integer", "example": 2},
+                # "quantity": {"type": "integer", "example": 2},
             },
-            "required": ["item", "quantity"],
+            # "required": ["item", "quantity"],
         }
     },
     responses={
@@ -260,58 +274,43 @@ def order_items(request):
     return Response(seralizer.data)
 
 
-# @extend_schema(
-#     operation_id="make_stk_push",
-#     summary="Initiate STK push payment",
-#     description="Initiate an STK push payment.",
-#     request={
-#         "application/json": {
-#             "type": "object",
-#             "properties": {
-#                 "amount": {"type": "number", "example": 100.0},
-#                 "phone_number": {"type": "string", "example": "0712345678"},
-#                 "callback_url": {
-#                     "type": "string",
-#                     "example": "http://example.com/callback",
-#                 },
-#                 "account_reference": {"type": "string", "example": "Order123"},
-#                 "transaction_desc": {"type": "string", "example": "Payment for goods"},
-#             },
-#             "required": ["amount", "phone_number", "callback_url"],
-#         }
-#     },
-#     responses={
-#         200: OpenApiResponse(description="STK push initiated successfully."),
-#         400: OpenApiResponse(
-#             description="Validation errors.",
-#             examples={
-#                 "application/json": {
-#                     "amount": ["This field is required."],
-#                 }
-#             },
-#         ),
-#     },
-# )
-# @api_view(["POST", "GET"])
-# def make_stk_push(request):
-#     # Get the necessary data from the request
-#     amount = request.data.get("amount")
-#     phone_number = request.data.get("phone_number")
-#     callback_url = request.data.get("callback_url")
-#     account_reference = request.data.get("account_reference")
-#     transaction_desc = request.data.get("transaction_desc")
+@extend_schema(
+    operation_id="get_bikes_order_duration",
+    summary="Retrieve Order Duration for a Shop",
+    description="Fetches the order duration details for a specific shop based on the provided item ID.",
+    parameters=[
+        OpenApiParameter(
+            name="item",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="The item ID to filter order duration records.",
+        )
+    ],
+    responses={200: OrderDurationSerializer(many=True)},
+)
+@api_view(["GET"])
+def orderDuration(request):
+    item_id = request.query_params.get("item")
 
-#     # Create an instance of the MpesaClient class with the access token
-#     access_token = "F5ffBeCl03a4ikmV2s37aZbohwCG"
-#     mpesa_client = MpesaClient(access_token)
+    if not item_id:
+        return Response({"error": "Item ID is required"}, status=400)
 
-#     # Make the STK push payment
-#     response = mpesa_client.make_stk_push(
-#         amount, phone_number, callback_url, "174379", "Pay for goods"
-#     )
+    try:
+        # Retrieve the shop associated with the given item
+        item = Item.objects.get(id=item_id)
+        shop = item.shop  # Assuming `Item` model has a `shop` ForeignKey
 
-#     # Return the response as the API response
-#     return Response(response)
+        print(f"Shop ID is {shop.id}")
+
+        # Get order durations for the shop
+        durations = OrderDuration.objects.filter(shop=shop)
+        serializer = OrderDurationSerializer(durations, many=True)
+
+        return Response({"data": serializer.data})
+
+    except Item.DoesNotExist:
+        return Response({"error": "Item not found"}, status=404)
 
 
 @api_view(["POST"])
@@ -483,8 +482,78 @@ def time_spent(request, order_id):
 @api_view(["POST"])
 @has_perms(["can_update_bikes"], shop_required=True)
 def shopOrders(request):
-    orders = OrderItem.objects.filter(item__shop_id=request.validated_shop_id)  # Use filter to avoid exceptions
+    orders = OrderItem.objects.filter(
+        item__shop_id=request.validated_shop_id
+    )  # Use filter to avoid exceptions
 
     serializer = OrderItemSerializer(orders, many=True)
     print(serializer.data)
-    return Response({"data":serializer.data})  # Ensure the Response object is returned
+    return Response({"data": serializer.data})  # Ensure the Response object is returned
+
+
+@extend_schema(
+    summary="Create an OrderDuration",
+    description="API endpoint to create an OrderDuration entry. Requires `can_update_bikes` permission and a valid shop ID.",
+    request={"application/json": {"example": {"time": 30, "price": "100.00"}}},
+    responses={
+        201: OpenApiResponse(
+            description="OrderDuration created successfully.",
+            examples=[
+                {
+                    "message": "OrderDuration created successfully.",
+                    "id": 1,
+                    "time": 30,
+                    "price": "100.00",
+                    "shop": 1,  # Shop ID auto-determined
+                }
+            ],
+        ),
+        400: OpenApiResponse(
+            description="Bad Request - Invalid input.",
+            examples=[
+                {"error": "All fields (time, price) are required."},
+                {"error": "Invalid price format."},
+            ],
+        ),
+    },
+)
+@api_view(["POST"])
+@has_perms(["can_update_bikes"], shop_required=True)
+def create_order_duration(request):
+    """
+    API view to create an OrderDuration entry.
+    """
+    data = request.data
+
+    # Validate required fields
+    time = data.get("time")
+    price = data.get("price")
+
+    if not time or not price:
+        return Response({"error": "All fields (time, price) are required."}, status=400)
+
+    # Retrieve the shop from the logged-in user's context
+    # shop = request.validated_shop_id  # This is set by @has_perms
+    shop = Shop.objects.get(id =request.validated_shop_id)
+
+    # Convert price to string (if needed)
+    try:
+        price = str(
+            Decimal(price)
+        )  # Ensure it can be converted to a valid numeric string
+    except:
+        return Response({"error": "Invalid price format."}, status=400)
+
+    # Create OrderDuration instance
+    order_duration = OrderDuration.objects.create(time=time, price=price, shop=shop)
+
+    return Response(
+        {
+            "message": "OrderDuration created successfully.",
+            "id": order_duration.id,
+            "time": order_duration.time,
+            "price": order_duration.price,
+            "shop": order_duration.shop.id,  # Returned for reference
+        },
+        status=201,
+    )

@@ -173,6 +173,7 @@ REST_FRAMEWORK = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://5750-105-29-165-233.ngrok-free.app',
+    "https://crucial-perfect-horse.ngrok-free.app"
 ]
+    
 CORS_ALLOW_ALL_ORIGINS=True

@@ -66,8 +66,8 @@ class Roles(models.Model):
         return self.name[0:50]
 
     class Meta:
-        db_table = "Role"   
-        unique_together = ('name', 'shop')  #
+        db_table = "Role"
+        unique_together = ("name", "shop")  #
 
 
 class ShopUSer(models.Model):
@@ -86,4 +86,10 @@ class ShopUSer(models.Model):
 
     class Meta:
         db_table = "ShopUser"
-        unique_together = ('name', 'shop')
+        unique_together = ("name", "shop")
+
+
+class OrderDuration(models.Model):
+    time = models.CharField(max_length=100, unique=True)
+    price = models.CharField(max_length=100)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, null=True)

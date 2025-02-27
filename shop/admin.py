@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 
-from . models import  Roles, Shop,ShopUSer
+from . models import  OrderDuration, Roles, Shop,ShopUSer
 
 class ShopAdmin(admin.ModelAdmin):
     model = Shop
@@ -38,6 +38,13 @@ class ShopeUserAdmin(admin.ModelAdmin):
 
 
 admin.site.register(ShopUSer, ShopeUserAdmin)
+
+class OrderDurationAdmin(admin.ModelAdmin):
+    model = OrderDuration
+    list_display = ("id","time", "price")
+
+
+admin.site.register(OrderDuration, OrderDurationAdmin)
 
 
 
