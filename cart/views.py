@@ -37,7 +37,7 @@ from shop.models import OrderDuration, Shop
                     "type": "string",
                     "description": "Phone number to use for payment.",
                 },
-                "usage_time": {
+                "duration": {
                     "type": "integer",
                     "description": "Duration in hours for which the bike is rented (e.g., 1, 2, 3, 8, 24).",
                 },
@@ -200,7 +200,7 @@ def endOrder(request):
         order.price = final_price
         order.save()
 
-        mpesa_callback = "https://5750-105-29-165-233.ngrok-free.app/cart/callback/"
+        mpesa_callback = "https://crucial-perfect-horse.ngrok-free.app/cart/callback/"
 
         mpesa_client = MpesaClient()
         payment_no = request.data.get("payment_no")
@@ -332,23 +332,23 @@ def mpesa_callback(request):
     return Response(status=200)
 
 
-@extend_schema(
-    operation_id="delivered_orders",
-    summary="Retrieve delivered orders",
-    description="Retrieve all delivered orders.",
-    responses={
-        200: OpenApiResponse(description="List of delivered orders."),
-    },
-)
-@api_view(["GET"])
-def delivered(request):
-    order = Order.objects.all()
-    queryset = OrderItem.objects.all()
-    q1 = OrderItem.objects.filter(order=65)
-    serializer = OrderItemSerializer(q1, many=True)
-    confirmed = Order.objects.filter(confirmed=True)
-    serializer1 = OrderSerializer(confirmed, many=True)
-    return Response({"orders": serializer1.data})
+# @extend_schema(
+#     operation_id="delivered_orders",
+#     summary="Retrieve delivered orders",
+#     description="Retrieve all delivered orders.",
+#     responses={
+#         200: OpenApiResponse(description="List of delivered orders."),
+#     },
+# )
+# @api_view(["GET"])
+# def delivered(request):
+#     order = Order.objects.all()
+#     queryset = OrderItem.objects.all()
+#     q1 = OrderItem.objects.filter(order=65)
+#     serializer = OrderItemSerializer(q1, many=True)
+#     confirmed = Order.objects.filter(confirmed=True)
+#     serializer1 = OrderSerializer(confirmed, many=True)
+#     return Response({"orders": serializer1.data})
 
 
 @extend_schema(
@@ -415,13 +415,13 @@ def rate(request):
 @api_view(["GET"])
 def userOrder(request):
     user = request.account
-    userOrders = Order.objects.filter(account=user)
+    userOrders = OrderItem.objects.filter(account=user)
     orders = []
     o = 0
     for i in userOrders:
         # print("i am " +str(i))
         order_id = userOrders[o]
-        serializer = OrderSerializer(order_id)
+        serializer = OrderItemSerializer(order_id)
         # print(serializer.data)
         orders.append(serializer.data)
 
@@ -429,28 +429,28 @@ def userOrder(request):
     return Response({"orders": orders})
 
 
-@extend_schema(
-    operation_id="end_lease",
-    summary="End lease for an order",
-    description="End the lease for a specific order.",
-    responses={
-        200: OpenApiResponse(description="Lease ended successfully."),
-        404: OpenApiResponse(
-            description="Order not found.",
-        ),
-    },
-)
-@api_view(["POST"])
-def end_lease(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id)
-        order.end_time = timezone.now()  # Set the end time to the current time
-        order.save()
-        return Response(
-            {"message": "Lease ended successfully", "end_time": str(order.end_time)}
-        )
-    except Order.DoesNotExist:
-        return Response({"error": "Order not found"}, status=404)
+# @extend_schema(
+#     operation_id="end_lease",
+#     summary="End lease for an order",
+#     description="End the lease for a specific order.",
+#     responses={
+#         200: OpenApiResponse(description="Lease ended successfully."),
+#         404: OpenApiResponse(
+#             description="Order not found.",
+#         ),
+#     },
+# )
+# @api_view(["POST"])
+# def end_lease(request, order_id):
+#     try:
+#         order = Order.objects.get(id=order_id)
+#         order.end_time = timezone.now()  # Set the end time to the current time
+#         order.save()
+#         return Response(
+#             {"message": "Lease ended successfully", "end_time": str(order.end_time)}
+#         )
+#     except Order.DoesNotExist:
+#         return Response({"error": "Order not found"}, status=404)
 
 
 @extend_schema(
@@ -467,10 +467,13 @@ def end_lease(request, order_id):
 @api_view(["GET"])
 def time_spent(request, order_id):
     try:
-        order = Order.objects.get(id=order_id)
+        order = OrderItem.objects.get(id=order_id)
+        if order.end_time != None:
+            time_spent = order.end_time - order.start_time
+            return Response({"time_spent": str(time_spent)})
         time_spent = timezone.now() - order.start_time
         return Response({"time_spent": str(time_spent)})
-    except Order.DoesNotExist:
+    except OrderItem.DoesNotExist:
         return Response({"error": "Order not found"}, status=404)
 
 
@@ -534,7 +537,7 @@ def create_order_duration(request):
 
     # Retrieve the shop from the logged-in user's context
     # shop = request.validated_shop_id  # This is set by @has_perms
-    shop = Shop.objects.get(id =request.validated_shop_id)
+    shop = Shop.objects.get(id=request.validated_shop_id)
 
     # Convert price to string (if needed)
     try:

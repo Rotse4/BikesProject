@@ -13,7 +13,7 @@ class Shop(models.Model):
     name = models.CharField(max_length=100, unique=True)
     owner = models.ForeignKey(Account, on_delete=models.CASCADE)
     cdate = models.DateTimeField(auto_now_add=True)
-    udate = models.DateTimeField(auto_now_add=True)
+    udate = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return self.name[0:50]
