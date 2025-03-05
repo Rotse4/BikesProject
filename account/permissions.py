@@ -46,7 +46,7 @@ def has_perms(perm_names, shop_required=False):
 
                     role = user_role.get("role")
                     shop = user_role.get("shop")
-                    print(f"shop is {shop}")
+                    print(f"shop is {shop} {role}")
                     
 
                 if role:

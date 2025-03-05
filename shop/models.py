@@ -86,7 +86,7 @@ class ShopUSer(models.Model):
 
     class Meta:
         db_table = "ShopUser"
-        unique_together = ("name", "shop")
+        unique_together = ("user", "shop")
 
 
 class OrderDuration(models.Model):

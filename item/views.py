@@ -115,16 +115,39 @@ def updateItem(request, pk):
         # Only get items from the user's shop
         food = Item.objects.get(id=pk, shop_id=request.validated_shop_id)
     except Item.DoesNotExist:
-        return Response({"error": "Item not found or you don't have permission to update it"}, status=404)
+        return Response(
+            {"error": "Item not found or you don't have permission to update it"},
+            status=404,
+        )
 
     serializer = ItemSerializer(food, data=request.data)
     if serializer.is_valid():
         # Ensure the shop ID cannot be changed
-        if 'shop' in serializer.validated_data:
-            serializer.validated_data['shop'] = food.shop
+        if "shop" in serializer.validated_data:
+            serializer.validated_data["shop"] = food.shop
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
+
+
+
+@extend_schema(
+    parameters=[OpenApiParameter(name="pk", type=OpenApiTypes.INT, location=OpenApiParameter.PATH)],
+    responses={200: {"message": "Item deleted successfully"}},
+    summary="Delete bike requires[can_delete_item]",
+)
+@api_view(["DELETE"])
+@has_perms(["can_delete_item"], shop_required=True)
+def deleteItem(request, pk: int):
+    try:
+        # Only get items from the user's shop
+        item = Item.objects.get(id=pk, shop_id=request.validated_shop_id)
+    except Item.DoesNotExist:
+        return Response({"error": "Item not found or you don't have permission to delete it"}, status=404)
+    
+    item.delete()
+    return Response({"message": "Item deleted successfully"}, status=200)
+
 
 
 @extend_schema(
@@ -182,6 +205,9 @@ def item_search_view(request):
 
     serializer = ItemSerializer(queryset, many=True)
     return Response({"foods": serializer.data})
+
+
+
 
 
 from rest_framework.permissions import IsAuthenticated
