@@ -9,7 +9,7 @@ from shop.serializers import ShopUserSerializer
 from .serializers import AccountSerealizer, RoleSerializer, SelectShopSerializer
 
 # from .auth_middware import TokenAuthenticationMiddleware
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema,OpenApiParameter
 import datetime
 from rest_framework.response import Response
 import jwt
@@ -382,6 +382,43 @@ def userLogin(request):
     # Authentication failed
     return Response({"error": "Invalid credentials"}, status=400)
 
+
+
+@extend_schema(
+    methods=["GET"],
+    summary="Search User by Phone Number",
+    description="Retrieve user details by phone number.",
+    parameters=[
+        OpenApiParameter(
+            name="phone_number",
+            description="Phone number of the user to search",
+            required=True,
+            type=str
+        )
+    ],
+    responses={200: "User details if found", 404: "User not found"}
+)
+@api_view(["GET"])
+def search_user_by_phone(request):
+    phone_number = request.query_params.get("phone_number")
+    
+    if not phone_number:
+        return Response({"error": "Phone number is required"}, status=400)
+    
+    try:
+        user = Account.objects.get(phone_number=phone_number)
+        return Response({
+            "id": user.id,
+            "username": user.username,
+            "phone_number": user.phone_number,
+            "date_joined": user.date_joined,
+            "last_login": user.last_login,
+            "is_active": user.is_active,
+            "is_staff": user.is_staff,
+            "is_superuser": user.is_superuser
+        })
+    except Account.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
 
 def _generate_token_response(user, shop):
     """

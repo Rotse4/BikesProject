@@ -7,6 +7,7 @@ urlpatterns = [
     path('adminLogin', views.adminLogin),
     path('userLogin', views.userLogin),
     path('select_shop', views.select_shop),
+     path('search_user', views.search_user_by_phone),
     path('getShopRoles/', views.ShopList.as_view()),
 ]
 
