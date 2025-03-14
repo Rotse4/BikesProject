@@ -194,6 +194,6 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-CSRF_TRUSTED_ORIGINS = ["https://crucial-perfect-horse.ngrok-free.app, bikesproject-production.up.railway.app","https://bikesproject-production.up.railway.app"]
+CSRF_TRUSTED_ORIGINS = ["https://crucial-perfect-horse.ngrok-free.app","https://bikesproject-production.up.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True
