@@ -29,7 +29,7 @@ SECRET_KEY = "django-insecure-yc8i%2e#co*^henzd_a$so@^!jwa97e^#9fz+mkqe*u1^nu9t-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["bikesproject-production.up.railway.app","https://bikesproject-production.up.railway.app"]
 
 
 # Application definition
@@ -194,6 +194,6 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-CSRF_TRUSTED_ORIGINS = ["https://crucial-perfect-horse.ngrok-free.app"]
+CSRF_TRUSTED_ORIGINS = ["https://crucial-perfect-horse.ngrok-free.app, bikesproject-production.up.railway.app","https://bikesproject-production.up.railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = True
